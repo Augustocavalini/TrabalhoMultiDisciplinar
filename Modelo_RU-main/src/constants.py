@@ -2,9 +2,9 @@ import json
 
 import os
 
-# with open('config.json', 'r') as f:
-#     config = json.load(f)
-config = json.load(open(os.path.join(os.path.dirname(__file__), '..\config.json')))
+with open('config.json', 'r') as f:
+    config = json.load(f)
+# config = json.load(open(os.path.join(os.path.dirname(__file__), '..\config.json')))
 
 MAX_BLOCKED_STEPS = config["MAX_BLOCKED_STEPS"]
 WAITING_TIME_THRESHOLD = config["WAITING_TIME_THRESHOLD"]

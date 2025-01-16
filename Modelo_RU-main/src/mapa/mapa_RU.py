@@ -29,3 +29,4 @@ class GridConfig:
         data = json.load(open(os.path.join(os.path.dirname(__file__), 'grid_config.json')))
         raw_grid = data['grid']
         return [[CellType(cell) for cell in row] for row in raw_grid]
+        # retorna o tipo de cada célula do grid

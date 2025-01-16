@@ -1,7 +1,7 @@
 from mesa import Model
-from mesa.time import RandomActivation
+# from mesa.time import RandomActivation
 from mesa.space import MultiGrid
-from mesa.visualization.modules import TextElement
+# from mesa.visualization.modules import TextElement
 from mesa.datacollection import DataCollector
 
 from mapa.mapa_RU import CellType
@@ -9,16 +9,18 @@ from constants import *
 from agents import StudentAgent, StaticAgent, MovementUtils
 
 
-class ModelText(TextElement):
-    def __init__(self):
-        pass
+# ESSA CLASSE SETAVA OS TEXTOS E ESTATÍSTICAS QUE APARECIAM NA TELA
+# DE VISUALIZAÇÃO DA SIMULAÇÃO, MAS NÃO É MAIS UTILIZADA
+# class ModelText(TextElement):
+#     def __init__(self):
+#         pass
 
-    def render(self, model):
-        student_agents = [
-            agent for agent in model.schedule.agents if isinstance(agent, StudentAgent)]
-        avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
-            len(student_agents) if student_agents else 0
-        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio: {avg_waiting_time} | "
+#     def render(self, model):
+#         student_agents = [
+#             agent for agent in model.schedule.agents if isinstance(agent, StudentAgent)]
+#         avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
+#             len(student_agents) if student_agents else 0
+#         return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio: {avg_waiting_time} | "
 
 
 class RestaurantModel(Model):
@@ -52,7 +54,10 @@ class RestaurantModel(Model):
         })
 
         self.grid = MultiGrid(self.width, self.height, True)
-        self.schedule = RandomActivation(self)
+        # self.schedule = RandomActivation(self) alterado em outro ponto do codigo
+        # self.agents.shuffle_do("step")
+
+        # !! VERIFICAR SE VALORES TEMPORAIS AINDA ESTÃO SENDO HABILIADOS
         self.day = day
         self.meal = meal
         self.hour = int(hour.split(":")[0]) * 3600  # Convert to seconds
@@ -94,8 +99,15 @@ class RestaurantModel(Model):
             print(self.error_message)
             return
 
-        self.time += 1
-        self.schedule.step()
+        # !! CHAMAR SELF AQ É CHAMAR O PRÓPRIO MODELO
+        # VERIFICAR QUAIS FUNÇÕES PODEM SER CHAMADAS DIRETAMENTE
+        # AGORA PARA MOVIMENTAR OS AGENTES TEM QUE CHAMAR SELF.AGENTS.SHUFFLE_DO("STEP")
+        # MARCANDO QUE OS AGENTES DEVEM EXECUTAR O MÉTODO STEP
+        self.time += 1 ## é definido no modelo que cada step tem duracao de 1 segundo
+        # CRIAR NOSSA PRÓPRIA VARIÁVEL TIME PARA CONTROLAR O TEMPO
+
+
+        self.agents.shuffle_do("step") # CHAMANDO O MÉTODO STEP DE TODOS OS AGENTES
 
         # Add a new student on the first step or every 8 steps.
         matching_rows = self.filtered_df[self.filtered_df['seconds_from_start'] == self.time]
