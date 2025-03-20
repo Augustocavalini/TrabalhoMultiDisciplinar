@@ -5,11 +5,20 @@ from constants import DEFAULT_TRAY_PORTIONS, WAITING_TIME_THRESHOLD, TRAY_INTERA
 from mapa.mapa_RU import CellType
 from mesa.space import MultiGrid
 import math as mt
+import os
+import json
+import numpy as np
 
 CATRACA_MAPPING = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
 
 TRAY_TYPES = {'Rice_tray', 'Brown_Rice_Tray', 'Beans_Tray',
               'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray'}
+
+DEFAULT_TRAY_PORTIONS = 100
+DEFAULT_TRAY_PORTIONS_STD = 15
+TRAY_INTERACTION_TIME = 15
+TRAY_INTERACTION_TIME_STD = 3
+
 
 class StaticAgent(Agent):
     def __init__(self, unique_id, model, pos_x, pos_y, agent_type):
@@ -23,14 +32,14 @@ class StaticAgent(Agent):
         if self.type == "EMPTY_TRAY":
             return "EMPTY"
         elif "Tray" in self.type:
-            self.food_count = DEFAULT_TRAY_PORTIONS
+            self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
             return self.type.split('_')[0]
         else:
             return None
 
     def refill(self):
         if "Tray" in self.type:
-            self.food_count = DEFAULT_TRAY_PORTIONS
+            self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
             print(f"Refilled {self.type} at position {self.x}, {self.y}")
 
 class StudentAgent(Agent):
@@ -82,12 +91,12 @@ class StudentAgent(Agent):
         if self.diet == "vegan":
             if tray_type == 'Veg_Tray':
                 self.tray_interaction_target = 'Veg_Tray'
-                self.interaction_timer = TRAY_INTERACTION_TIME
+                self.interaction_timer =  int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
         elif self.diet == "meat_eater":
             if tray_type == 'Meat_Tray':
                 self.tray_interaction_target = 'Meat_Tray'
-                self.interaction_timer = TRAY_INTERACTION_TIME
+                self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
         else:
             self.tray_interaction_target = 'Sal_Tray'
@@ -95,18 +104,18 @@ class StudentAgent(Agent):
         if self.rice_type == "brown_rice":
             if tray_type == 'Brown_Rice_Tray':
                 self.tray_interaction_target = 'brown_rice'
-                self.interaction_timer = TRAY_INTERACTION_TIME
+                self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
         elif self.rice_type == "rice":
             if tray_type == 'Rice_Tray':
                 self.tray_interaction_target = 'Rice_Tray'
-                self.interaction_timer = TRAY_INTERACTION_TIME
+                self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
         else:
             self.tray_interaction_target = 'Beans_Tray'
 
         if tray_type != 'Meat_Tray' and tray_type != 'Veg_Tray' and tray_type != 'Rice_Tray' and tray_type != 'Brown_Rice_Tray':
             self.tray_interaction_target = tray_type
-            self.interaction_timer = TRAY_INTERACTION_TIME
-
+            # print(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+            self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
     def _choose_empty_path(self):
         self.update_path_occupancy()
         catraca_id_str = str(self.catraca_id)
@@ -208,9 +217,15 @@ class StudentAgent(Agent):
                 return chossen_table
 
    
+    # with open(os.path.join(os.path.dirname(__file__), '..', 'config.json'), 'r') as f:
+    #     config = json.load(f)
+
     def set_table_interaction_target(self, table):
+        time_table_delays = [60*10, 60*12, 60*15, 60*17, 60*18, 60*20, 60*23, 60*25, 60*30, 60*35, 60*37, 60*40, 60*40.5, 60*45, 60*50, 60*55, 60*60, 60*70]
+        frequencies_table = [15, 1, 26, 1, 2, 100, 1, 26, 133, 7, 1, 58, 1, 5, 13, 1, 6, 2]
+        x = np.random.choice(time_table_delays, p=np.array(frequencies_table)/sum(frequencies_table))
         self.table_interaction_target = table
-        self.interaction_table_timer = TABLE_INTERACTION_TIME
+        self.interaction_table_timer = x
 
     def teleport_to_table(self, table):
         x, y = self.pos
