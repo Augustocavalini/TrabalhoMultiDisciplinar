@@ -54,9 +54,21 @@ class StudentAgent(Agent):
         self._initialize_preferences()
         self.determine_catraca_id()
 
+    def escolher_arroz(self):
+        opcoes = ["rice", "brown_rice", "no_rice"]
+        probabilidades = [0.8625, 0.13, 0.0075]
+        return random.choices(opcoes, weights=probabilidades, k=1)[0]
+
+    def escolher_dieta(self):
+        opcoes = ["vegan", "meat_eater", "no_meat_or_veg"]
+        probabilidades = [0.05, 0.95, 0]
+        return random.choices(opcoes, weights=probabilidades, k=1)[0]
+
     def _initialize_preferences(self):
-        self.diet = random.choice(["vegan", "meat_eater", "no_meat_or_veg"])
-        self.rice_type = random.choice(["rice", "brown_rice", "no_rice"])
+        self.diet = self.escolher_dieta()
+        self.rice_type = self.escolher_arroz()
+
+
 
     def check_tray_interaction(self):
         x, y = self.pos

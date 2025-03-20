@@ -16,7 +16,7 @@ from mesa.visualization.modules import CanvasGrid
 from datetime import datetime
 import pandas as pd 
 
-DATAFRAME = pd.read_csv('Modelo_RU_main\src\logentrada.csv')
+DATAFRAME = pd.read_csv('logentrada.csv')
 # Convert 'Entrada' to datetime
 DATAFRAME['Entrada'] = pd.to_datetime(DATAFRAME['Entrada'])
 
