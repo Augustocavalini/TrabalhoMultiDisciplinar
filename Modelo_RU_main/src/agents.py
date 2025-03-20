@@ -1,7 +1,7 @@
 from mesa import Agent
 import random
 from mapa.paths import PATHS_CATRACAS
-from constants import DEFAULT_TRAY_PORTIONS, WAITING_TIME_THRESHOLD, TRAY_INTERACTION_TIME, TABLE_INTERACTION_TIME
+from constants import  WAITING_TIME_THRESHOLD
 from mapa.mapa_RU import CellType
 from mesa.space import MultiGrid
 import math as mt
