@@ -8,6 +8,7 @@ from mapa.mapa_RU import CellType
 from constants import *
 from agents import StudentAgent, StaticAgent, MovementUtils
 
+from openpyxl import Workbook, load_workbook
 
 class ModelText(TextElement):
     def __init__(self):
@@ -18,7 +19,40 @@ class ModelText(TextElement):
             agent for agent in model.schedule.agents if isinstance(agent, StudentAgent)]
         avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
             len(student_agents) if student_agents else 0
-        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio: {avg_waiting_time} | "
+        waiting_time_until_tray = sum(
+            agent.waiting_time_until_tray for agent in student_agents) / len(student_agents) if student_agents else 0
+
+        vect_tempo_esp_until_tray = []
+        vect_time_esp_until_tray = []
+
+        vect_time_esp_until_tray.append(model.time)
+        vect_tempo_esp_until_tray.append(waiting_time_until_tray)
+
+        arquivo = "valores.xlsx"
+
+        if os.path.exists(arquivo):
+            wb = load_workbook(arquivo)
+            ws = wb.active
+        else:
+            wb = Workbook()
+            ws = wb.active
+
+        # Descobre a última linha usada da coluna A
+        ultima_linha = ws.max_row
+
+        # Se a última célula está vazia, não conta como usada
+        if ws.cell(row=ultima_linha, column=1).value is not None:
+            nova_linha = ultima_linha + 1
+        else:
+            nova_linha = ultima_linha
+
+        # Escreve o valor na nova linha da primeira coluna
+        ws.cell(row=nova_linha, column=1, value=waiting_time_until_tray)
+
+        # Salva o arquivo
+        wb.save(arquivo)
+        
+        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio: {avg_waiting_time} | Tempo de fila antes da rampa: {(waiting_time_until_tray)} "
 
 
 class RestaurantModel(Model):

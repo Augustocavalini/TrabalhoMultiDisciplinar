@@ -8,6 +8,7 @@ import math as mt
 import os
 import json
 import numpy as np
+# from model import 
 
 CATRACA_MAPPING = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
 
@@ -48,6 +49,10 @@ class StudentAgent(Agent):
         self.pos = (x, y)
         self.type = "Student"
         self.waiting_time = 0
+
+        self.waiting_time_until_tray = 0
+        self.flag_until_tray = True
+
         self.blocked_steps = 0
         self.steps_visited = 0
         self.visited_groups = set()
@@ -77,6 +82,7 @@ class StudentAgent(Agent):
         self.diet = self.escolher_dieta()
         self.rice_type = self.escolher_arroz()
 
+    # VISTA
     def check_tray_interaction(self):
         x, y = self.pos
         upper_cell = (x, y - 1)
@@ -87,8 +93,10 @@ class StudentAgent(Agent):
 
         if upper_tray:
             self.set_tray_interaction_target(upper_tray)
+            self.flag_until_tray = False
         elif lower_tray:
             self.set_tray_interaction_target(lower_tray)
+            self.flag_until_tray = False
         else:
             self.move_to_next_step()
 
@@ -126,14 +134,18 @@ class StudentAgent(Agent):
             self.tray_interaction_target = tray_type
             # print(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+
+    # VISTA 
     def _choose_empty_path(self):
         self.update_path_occupancy()
+
         catraca_id_str = str(self.catraca_id)
-        valid_paths = [path for path in self.path_occupancy.keys() if str(
-            path).startswith(catraca_id_str)]
+        valid_paths = [path for path in self.path_occupancy.keys() if str(path).startswith(catraca_id_str)]
+        
         if not valid_paths:
             print('Student found no valid path! FIX THIS URGENT')
             return None
+        
         min_occupancy = min(self.path_occupancy[path] for path in valid_paths)
         least_occupied_paths = [
             path for path in valid_paths if self.path_occupancy[path] == min_occupancy]
@@ -143,6 +155,7 @@ class StudentAgent(Agent):
 
         return random.choice(least_occupied_paths)
 
+    # VISTA
     def update_path_occupancy(self):
         self.path_occupancy = {}
         for path_name in PATHS_CATRACAS.keys():
@@ -150,12 +163,15 @@ class StudentAgent(Agent):
                 agent, StudentAgent) and agent.current_path == path_name])
             self.path_occupancy[path_name] = occupancy
 
+    # VISTA
     def determine_catraca_id(self):
         for catraca_id, catraca_position in CATRACA_MAPPING.items():
             if self.pos == catraca_position:
                 self.catraca_id = catraca_id
 
+    # VISTA
     def move_to_next_step(self):
+        
         if self.current_path:
             path_coordinates = PATHS_CATRACAS.get(self.current_path, [])
             if path_coordinates:
@@ -190,6 +206,7 @@ class StudentAgent(Agent):
                     self.terminou_path = True
             else:
                 print(f"Agent {self.unique_id} has no more steps to follow in path {self.current_path}")
+        
         else:
             print(f"Agent {self.unique_id} has no current path to follow.")
 
@@ -210,13 +227,21 @@ class StudentAgent(Agent):
                     table = self.find_nearest_free_table()
                     if table:
                         self.teleport_to_table(table)
+            
             elif self.interaction_timer > 0:
                 self.interaction_timer -= 1
                 self.waiting_time += 1
+            
             elif self.interaction_timer == 0:
                 self.waiting_time += 1
+
+                if self.flag_until_tray:
+                    self.waiting_time_until_tray += 1
+
                 self.check_tray_interaction()
                 self.move_to_next_step()
+
+
 
     def find_nearest_free_table(self):
         tables = self.model.get_free_tables(self.pos)

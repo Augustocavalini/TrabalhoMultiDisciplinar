@@ -1,7 +1,5 @@
 # Modelo do Restaurante Universitario
 
-## Luan Reis e Arthur
-
 ### Definição de Parâmetros e Ambiente
 
 #- **Entradas**: 2 conjuntos de 2 catracas cada
