@@ -226,6 +226,7 @@ class StudentAgent(Agent):
                 else:
                     table = self.find_nearest_free_table()
                     if table:
+                        self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
                         self.teleport_to_table(table)
             
             elif self.interaction_timer > 0:

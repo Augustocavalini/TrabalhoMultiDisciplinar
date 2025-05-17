@@ -19,14 +19,21 @@ class ModelText(TextElement):
             agent for agent in model.schedule.agents if isinstance(agent, StudentAgent)]
         avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
             len(student_agents) if student_agents else 0
-        waiting_time_until_tray = sum(
-            agent.waiting_time_until_tray for agent in student_agents) / len(student_agents) if student_agents else 0
+        
+        waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in student_agents if agent.flag_until_tray == True) / \
+            len(student_agents) if student_agents else 0
 
-        vect_tempo_esp_until_tray = []
-        vect_time_esp_until_tray = []
+        agents_until_tray = [agent for agent in student_agents if agent.flag_until_tray == True]
+        waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in agents_until_tray) / len(agents_until_tray) if agents_until_tray else 0
 
-        vect_time_esp_until_tray.append(model.time)
-        vect_tempo_esp_until_tray.append(waiting_time_until_tray)
+        avg_waiting_time_total = model.waiting_time_until_tray_total / model.num_students_total if model.num_students_total > 0 else 0
+
+
+        # vect_tempo_esp_until_tray = []
+        # vect_time_esp_until_tray = []
+
+        # vect_time_esp_until_tray.append(model.time)
+        # vect_tempo_esp_until_tray.append(waiting_time_until_tray)
 
         arquivo = "valores.xlsx"
 
@@ -48,13 +55,12 @@ class ModelText(TextElement):
 
         # Escreve o valor na nova linha da primeira coluna
         ws.cell(row=nova_linha, column=1, value=waiting_time_until_tray)
+        ws.cell(row=nova_linha, column=2, value=avg_waiting_time_total)
 
         # Salva o arquivo
         wb.save(arquivo)
         
-        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio: {avg_waiting_time} | Tempo de fila antes da rampa: {(waiting_time_until_tray)} "
-
-
+        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio(pra qualquer coisa): {avg_waiting_time} | Tempo de fila antes da rampa(): {(waiting_time_until_tray)}  | Tempo de espera medio(ao longo de todo o período): {avg_waiting_time_total} "
 class RestaurantModel(Model):
     AGENT_TYPE_MAPPING = {
         CellType.TURNSTILE: 'Turnstile',
@@ -94,6 +100,10 @@ class RestaurantModel(Model):
         self.error_message = None
         self.next_id = 0
         self.num_students = 0
+
+        self.num_students_total = 0 # calcula o número total de estudantes que entraram no modelo
+        self.waiting_time_until_tray_total = 0 # calcula o tempo total de espera até a bandeja, por todos os estudantes que passsaram pelo modelo
+
         self.filtered_df = filtered_df
         self.locations_cache = {
             'empty_trays': self.find_cell_positions(CellType.EMPTY_TRAY),
@@ -178,6 +188,7 @@ class RestaurantModel(Model):
             self.grid.place_agent(student, chosen_entry)
             self.schedule.add(student)
             self.num_students += 1
+            self.num_students_total += 1
 
         print(f"Trying to add a new student at {chosen_entry}")
 
