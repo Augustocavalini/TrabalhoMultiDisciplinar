@@ -1,3 +1,9 @@
+##criar as interações com suco, sobremesa e tempero (juice_interaction, dessert_interaction, seasoning_interaction)
+##verificar os tempos de atividades de como sao feitos (mexer no random time de cada um)
+##criar a variavel time_until_variable para cada uma delas e calcular no model os tempos medios de fila
+##caso possivel mexer na variavel time_until_tray para dividi-la em 6 e avaliar o tempo de espera para cada uma das trays.
+##mexer nas constantes como DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD, TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD
+
 from mesa import Agent
 import random
 from mapa.paths import PATHS_CATRACAS
@@ -134,6 +140,8 @@ class StudentAgent(Agent):
             self.tray_interaction_target = tray_type
             # print(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+
+        
 
     # VISTA 
     def _choose_empty_path(self):

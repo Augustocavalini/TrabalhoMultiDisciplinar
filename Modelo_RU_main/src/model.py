@@ -1,3 +1,5 @@
+##realizar o calculo do tempo de fila dos pontos de atividades
+##mudanças de abordagens: ver como que funcionaria alternancia de fluxo de estudantes de entrada em uma tentativa de vcer o comportamento do modelo com uma divisão mais organizada de fluxo
 from mesa import Model
 from mesa.time import RandomActivation
 from mesa.space import MultiGrid
@@ -15,6 +17,7 @@ class ModelText(TextElement):
         pass
 
     def render(self, model):
+
         student_agents = [
             agent for agent in model.schedule.agents if isinstance(agent, StudentAgent)]
         avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
@@ -121,6 +124,12 @@ class RestaurantModel(Model):
             'tables': self.find_cell_positions(CellType.TABLE),
             'exits': self.find_cell_positions(CellType.EXIT)
         }
+
+        self.linha_fora_RU_1 = []
+        self.linha_fora_RU_2 = []
+        self.linha_fora_RU_3 = []
+        self.linha_fora_RU_4 = []
+
         for y, row in enumerate(external_grid):
             for x, cell_value in enumerate(row):
                 if cell_value in self.AGENT_TYPE_MAPPING:
@@ -145,6 +154,8 @@ class RestaurantModel(Model):
         matching_rows = self.filtered_df[self.filtered_df['seconds_from_start'] == self.time]
         for _, row in matching_rows.iterrows():
             self.add_new_student(catraca_id=row['IDCatraca'])
+        
+        self.put_students_in_line()
 
         self.datacollector.collect(self)
 
@@ -171,7 +182,10 @@ class RestaurantModel(Model):
         if self.num_students >= 10000:
             return
 
-        
+        #1 é a catraca inferior da direita
+        #2 é a catraca superior da direita
+        #3 é a catraca inferior da esquerda
+        #4 é a catraca superior da esquerda
         catraca_mapping = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
         entry_coords = [(18, 2), (18, 4), (99, 2), (99, 4)]
 
@@ -180,18 +194,44 @@ class RestaurantModel(Model):
             print(
                 f"Warning: Catraca ID {catraca_id} not found in mapping. Choosing random entry.")
             chosen_entry = self.random.choice(entry_coords)
+        
+        print(f"Estudante Chegou na fila da catraca {catraca_id} ({chosen_entry})")
+        student_id = self.get_next_id()
+        student = StudentAgent(student_id, self, *chosen_entry)
 
-        if not self.grid.get_cell_list_contents([chosen_entry]):
-            print(f"Adding student at {chosen_entry}...")
-            student_id = self.get_next_id()
-            student = StudentAgent(student_id, self, *chosen_entry)
-            self.grid.place_agent(student, chosen_entry)
-            self.schedule.add(student)
-            self.num_students += 1
-            self.num_students_total += 1
+        if chosen_entry == (18, 2):
+            self.linha_fora_RU_1.append(student)
+        elif chosen_entry == (18, 4):
+            self.linha_fora_RU_2.append(student)
+        elif chosen_entry == (99, 2):
+            self.linha_fora_RU_3.append(student)
+        elif chosen_entry == (99, 4):
+            self.linha_fora_RU_4.append(student)
+        
+        self.num_students += 1
+        self.num_students_total += 1
 
         print(f"Trying to add a new student at {chosen_entry}")
 
+
+    def put_students_in_line(self):
+        for line in [self.linha_fora_RU_1, self.linha_fora_RU_2, self.linha_fora_RU_3, self.linha_fora_RU_4]:
+            if line:
+                if self.grid.is_cell_empty(line[0].pos):
+                    student = line.pop(0)
+                    print(f"Placing student {student.unique_id} at ({student.pos})")
+                    self.grid.place_agent(student, (student.pos))
+                    self.schedule.add(student)
+                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+                else:
+                    print(f"Cell ({student.pos}) is not empty, cannot place student {student.unique_id}.")
+
+                for student in line:    
+                    print(f"Student {student.unique_id} is still waiting in line.")
+                    student.waiting_time_until_tray += 1
+
+            else:
+                print("No students in line to place.")
     def get_free_tables(self, student_pos):
         tables = []
         for table in self.locations_cache['tables']:
