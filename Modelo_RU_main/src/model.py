@@ -101,6 +101,7 @@ class RestaurantModel(Model):
     }
 
     def __init__(self, external_grid, day, meal, hour, filtered_df):
+        super().__init__()  # inicializa a superclasse Model do Mesa
         self.height = len(external_grid)
         self.width = len(external_grid[0])
         self.external_grid = external_grid
@@ -240,7 +241,8 @@ class RestaurantModel(Model):
                     self.schedule.add(student)
                     print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
                 else:
-                    print(f"Cell ({student.pos}) is not empty, cannot place student {student.unique_id}.")
+                    waiting_student = line[0]  # referência ao primeiro da fila sem remover
+                    print(f"Cell ({waiting_student.pos}) is not empty, cannot place student {waiting_student.unique_id}.")
 
                 for student in line:    
                     print(f"Student {student.unique_id} is still waiting in line.")
