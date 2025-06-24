@@ -11,6 +11,7 @@ from constants import *
 from agents import StudentAgent, StaticAgent, MovementUtils
 
 from openpyxl import Workbook, load_workbook
+import datetime
 
 class ModelText(TextElement):
     def __init__(self):
@@ -52,16 +53,31 @@ class ModelText(TextElement):
 
         # Se a última célula está vazia, não conta como usada
         if ws.cell(row=ultima_linha, column=1).value is not None:
-            nova_linha = ultima_linha + 1
-        else:
-            nova_linha = ultima_linha
+            # Sempre cria um novo arquivo ao iniciar uma nova execução do main.py
+            # Usa um nome de arquivo único baseado em timestamp
+            if not hasattr(model, 'result_file'):
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                model.result_file = f"valores_{timestamp}.xlsx"
+            arquivo = model.result_file
 
-        # Escreve o valor na nova linha da primeira coluna
-        ws.cell(row=nova_linha, column=1, value=waiting_time_until_tray)
-        ws.cell(row=nova_linha, column=2, value=avg_waiting_time_total)
+            if os.path.exists(arquivo):
+                wb = load_workbook(arquivo)
+                ws = wb.active
+            else:
+                wb = Workbook()
+                ws = wb.active
 
-        # Salva o arquivo
-        wb.save(arquivo)
+            ultima_linha = ws.max_row
+
+            if ws.cell(row=ultima_linha, column=1).value is not None:
+                nova_linha = ultima_linha + 1
+            else:
+                nova_linha = ultima_linha
+
+            ws.cell(row=nova_linha, column=1, value=waiting_time_until_tray)
+            ws.cell(row=nova_linha, column=2, value=avg_waiting_time_total)
+
+            wb.save(arquivo)
         
         return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio(pra qualquer coisa): {avg_waiting_time} | Tempo de fila antes da rampa(): {(waiting_time_until_tray)}  | Tempo de espera medio(ao longo de todo o período): {avg_waiting_time_total} "
 class RestaurantModel(Model):
