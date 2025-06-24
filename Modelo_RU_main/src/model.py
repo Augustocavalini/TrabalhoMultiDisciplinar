@@ -1,3 +1,7 @@
+##realizar o calculo do tempo de fila dos pontos de atividades
+##mudanças de abordagens: ver como que funcionaria alternancia de fluxo de estudantes de entrada em uma tentativa de vcer o comportamento do modelo com uma divisão mais organizada de fluxo
+
+
 from mesa import Model
 from mesa.time import RandomActivation
 from mesa.space import MultiGrid
@@ -20,14 +24,15 @@ class ModelText(TextElement):
         avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
             len(student_agents) if student_agents else 0
         
-        waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in student_agents if agent.flag_until_tray == True) / \
-            len(student_agents) if student_agents else 0
+        # waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in student_agents if agent.flag_until_tray == True) / \
+        #     len(student_agents) if student_agents else 0
 
         agents_until_tray = [agent for agent in student_agents if agent.flag_until_tray == True]
         waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in agents_until_tray) / len(agents_until_tray) if agents_until_tray else 0
 
         avg_waiting_time_total = model.waiting_time_until_tray_total / model.num_students_total if model.num_students_total > 0 else 0
-
+        
+        
 
         # vect_tempo_esp_until_tray = []
         # vect_time_esp_until_tray = []
