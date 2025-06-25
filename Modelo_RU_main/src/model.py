@@ -142,10 +142,12 @@ class RestaurantModel(Model):
             'exits': self.find_cell_positions(CellType.EXIT)
         }
 
-        self.linha_fora_RU_1 = []
-        self.linha_fora_RU_2 = []
-        self.linha_fora_RU_3 = []
-        self.linha_fora_RU_4 = []
+        # self.linha_fora_RU_1 = []
+        # self.linha_fora_RU_2 = []
+        # self.linha_fora_RU_3 = []
+        # self.linha_fora_RU_4 = []
+        self.linha_fora_RU_dir = []  # Linha de estudantes fora do RU, entrada direita
+        self.linha_fora_RU_esq = []  # Linha de estudantes fora do RU, entrada esquerda
 
         for y, row in enumerate(external_grid):
             for x, cell_value in enumerate(row):
@@ -172,7 +174,7 @@ class RestaurantModel(Model):
         for _, row in matching_rows.iterrows():
             self.add_new_student(catraca_id=row['IDCatraca'])
         
-        self.put_students_in_line()
+        self.put_students_in_line() # colocar um estudante depois da catraca, se houver um na fila
 
         self.datacollector.collect(self)
 
@@ -216,14 +218,11 @@ class RestaurantModel(Model):
         student_id = self.get_next_id()
         student = StudentAgent(student_id, self, *chosen_entry)
 
-        if chosen_entry == (18, 2):
-            self.linha_fora_RU_1.append(student)
-        elif chosen_entry == (18, 4):
-            self.linha_fora_RU_2.append(student)
-        elif chosen_entry == (99, 2):
-            self.linha_fora_RU_3.append(student)
-        elif chosen_entry == (99, 4):
-            self.linha_fora_RU_4.append(student)
+        if chosen_entry == (99, 2) or chosen_entry == (99, 4):
+            self.linha_fora_RU_dir.append(student)
+
+        elif chosen_entry == (18, 2) or chosen_entry == (18, 4):
+            self.linha_fora_RU_esq.append(student)
         
         self.num_students += 1
         self.num_students_total += 1
@@ -232,10 +231,34 @@ class RestaurantModel(Model):
 
 
     def put_students_in_line(self):
-        for line in [self.linha_fora_RU_1, self.linha_fora_RU_2, self.linha_fora_RU_3, self.linha_fora_RU_4]:
+        for idx, line in enumerate([self.linha_fora_RU_dir, self.linha_fora_RU_esq]):
             if line:
-                if self.grid.is_cell_empty(line[0].pos):
+                if idx == 0: # linha_fora_RU_dir
+                    pos_x = 99
+                elif idx == 1: # linha_fora_RU_esq
+                    pos_x = 18
+
+                if self.grid.is_cell_empty((pos_x, 2)) and self.grid.is_cell_empty((pos_x, 4)):
+                    pos_y = np.random.choice([2, 4])
                     student = line.pop(0)
+                    student.pos = (pos_x, pos_y)
+
+                    print(f"Placing student {student.unique_id} at ({student.pos})")
+                    self.grid.place_agent(student, (student.pos))
+                    self.schedule.add(student)
+                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+                elif self.grid.is_cell_empty((pos_x, 2)):
+                    student = line.pop(0)
+                    student.pos = (pos_x, 2)
+
+                    print(f"Placing student {student.unique_id} at ({student.pos})")
+                    self.grid.place_agent(student, (student.pos))
+                    self.schedule.add(student)
+                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+                elif self.grid.is_cell_empty((pos_x, 4)):
+                    student = line.pop(0)
+                    student.pos = (pos_x, 4)
+
                     print(f"Placing student {student.unique_id} at ({student.pos})")
                     self.grid.place_agent(student, (student.pos))
                     self.schedule.add(student)
@@ -245,7 +268,7 @@ class RestaurantModel(Model):
                     print(f"Cell ({waiting_student.pos}) is not empty, cannot place student {waiting_student.unique_id}.")
 
                 for student in line:    
-                    print(f"Student {student.unique_id} is still waiting in line.")
+                    #print(f"Student {student.unique_id} is still waiting in line.")
                     student.waiting_time_until_tray += 1
 
             else:
