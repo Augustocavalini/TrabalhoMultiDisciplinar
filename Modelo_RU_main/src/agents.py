@@ -1,14 +1,4 @@
-##criar as interações com suco, sobremesa e tempero (juice_interaction, dessert_interaction, seasoning_interaction)
-##verificar os tempos de atividades de como sao feitos (mexer no random time de cada um)
-##criar a variavel time_until_variable para cada uma delas e calcular no model os tempos medios de fila
-##caso possivel mexer na variavel time_until_tray para dividi-la em 6 e avaliar o tempo de espera para cada uma das trays.
-##mexer nas constantes como DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD, TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD
 
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 442f4f5e5fe500273ec84b99f7595d31c4d01d86
 from mesa import Agent
 import random
 from mapa.paths import PATHS_CATRACAS
@@ -71,8 +61,6 @@ class StudentAgent(Agent):
         self.current_goal = None
         self.current_path = None
         self.interaction_timer = 0
-        self.terminou_path_local = False
-        self.terminou_path = False
         self.ta_na_mesa = False
         self.interaction_table_timer = -1
         self.tray_interaction_target = None
@@ -82,6 +70,10 @@ class StudentAgent(Agent):
         # self.determine_catraca_id()
         self.catraca_id = None
 
+        self.terminou_path_local = False
+        self.terminou_path = False
+        self.at_common_path = True
+        
     def escolher_arroz(self):
         opcoes = ["rice", "brown_rice", "no_rice"]
         probabilidades = [0.8625, 0.13, 0.0075]
@@ -156,34 +148,54 @@ class StudentAgent(Agent):
             return None
 
 
-
-    # VISTA 
-    def _choose_empty_path(self):
-        self.update_path_occupancy()
-
-        catraca_id_str = str(self.catraca_id)
-        valid_paths = [path for path in self.path_occupancy.keys() if str(path).startswith(catraca_id_str)]
-        
-        if not valid_paths:
-            print('Student found no valid path! FIX THIS URGENT')
+    def _choose_optimal_path(self):
+        if self.catraca_id in [1, 2]: #estou no lado esquerdo
+            choosen_path = random.choice(list(PATHS_CATRACAS2.keys())[0:6]) #escolho os paths do lado esquerdo
+            
+            
+        elif self.catraca_id in [3, 4]: #estou no lado direito
+            choosen_path = random.choice(list(PATHS_CATRACAS2.keys())[6:12]) #escolho os paths do lado direito
+        else:
+            print(f"Warning: Invalid catraca_id {self.catraca_id}.")
             return None
         
-        min_occupancy = min(self.path_occupancy[path] for path in valid_paths)
-        least_occupied_paths = [
-            path for path in valid_paths if self.path_occupancy[path] == min_occupancy]
+        move = choosen_path[0]
+        if self.model.is_cell_empty(move, self.pos):
+            self.model.grid.move_agent(self, move)
+        
+        else:
+            print(f"Warning: Cell {move} is occupied, cannot move agent {self.unique_id}.")
+            return None           
+            
+        return choosen_path
 
-        if len(least_occupied_paths) == len(valid_paths):
-            return random.choice(least_occupied_paths)
+    # VISTA 
+    # def _choose_empty_path(self):
+    #     self.update_path_occupancy()
 
-        return random.choice(least_occupied_paths)
+    #     catraca_id_str = str(self.catraca_id)
+    #     valid_paths = [path for path in self.path_occupancy.keys() if str(path).startswith(catraca_id_str)]
+        
+    #     if not valid_paths:
+    #         print('Student found no valid path! FIX THIS URGENT')
+    #         return None
+        
+    #     min_occupancy = min(self.path_occupancy[path] for path in valid_paths)
+    #     least_occupied_paths = [
+    #         path for path in valid_paths if self.path_occupancy[path] == min_occupancy]
 
-    # VISTA
-    def update_path_occupancy(self):
-        self.path_occupancy = {}
-        for path_name in COMMOM_PATH_CATRACA.keys():
-            occupancy = len([agent for agent in self.model.schedule.agents if isinstance(
-                agent, StudentAgent) and agent.current_path == path_name])
-            self.path_occupancy[path_name] = occupancy
+    #     if len(least_occupied_paths) == len(valid_paths):
+    #         return random.choice(least_occupied_paths)
+
+    #     return random.choice(least_occupied_paths)
+
+    # # VISTA
+    # def update_path_occupancy(self):
+    #     self.path_occupancy = {}
+    #     for path_name in COMMOM_PATH_CATRACA.keys():
+    #         occupancy = len([agent for agent in self.model.schedule.agents if isinstance(
+    #             agent, StudentAgent) and agent.current_path == path_name])
+    #         self.path_occupancy[path_name] = occupancy
 
     # VISTA
     def determine_catraca_id(self):
@@ -195,7 +207,12 @@ class StudentAgent(Agent):
     def move_to_next_step(self):
         
         if self.current_path:
-            path_coordinates = PATHS_CATRACAS.get(self.current_path, [])
+            if self.at_common_path:
+                self.current_path = COMMOM_PATH_CATRACA.get(self.catraca_id, None)
+                if not self.current_path:
+                    print(f"Warning: No common path found for catraca_id {self.catraca_id}.")
+            else:
+                path_coordinates = PATHS_CATRACAS.get(self.current_path, [])
             if path_coordinates:
                 if len(path_coordinates) > self.steps_visited:
                     next_step = path_coordinates[self.steps_visited]
@@ -226,6 +243,9 @@ class StudentAgent(Agent):
                 else:
                     print(f"Agent {self.unique_id} has reached the end of path {self.current_path}")
                     self.terminou_path_local = True
+                    self.steps_visited = 0
+                    self.blocked_steps = 0
+                        # self.current_path = None
                     # quando chegar ao final do último path do modelo:
                     # self.terminou_path = True
             else:
@@ -258,7 +278,18 @@ class StudentAgent(Agent):
             elif self.terminou_path_local:
                 # escolher o novo path local
                 self.terminou_path_local = False
-                pass
+  
+                if self.at_common_path:
+                    self.current_path = self._choose_optimal_path()
+  
+                    # self.current_path = self._choose_empty_path()
+  
+                    if not self.current_path:
+                        print(f"Agent {self.unique_id} found no valid path to follow.")
+                        return
+                        
+
+                    self.at_common_path = False
             
             elif self.interaction_timer > 0:
                 self.interaction_timer -= 1

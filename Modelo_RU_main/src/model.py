@@ -1,11 +1,3 @@
-##realizar o calculo do tempo de fila dos pontos de atividades
-<<<<<<< HEAD
-##mudanças de abordagens: ver como que funcionaria alternancia de fluxo de estudantes de entrada em uma tentativa de vcer o comportamento do modelo com uma divisão mais organizada de fluxo
-
-
-=======
-##mudanças de abordagens: ver como que funcionaria alternancia de fluxo de estudantes de entrada em uma tentativa de vcer o comportamento do modelo com uma divisão mais organizada de fluxo
->>>>>>> 442f4f5e5fe500273ec84b99f7595d31c4d01d86
 from mesa import Model
 from mesa.time import RandomActivation
 from mesa.space import MultiGrid
