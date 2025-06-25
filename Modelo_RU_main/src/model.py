@@ -1,7 +1,11 @@
 ##realizar o calculo do tempo de fila dos pontos de atividades
+<<<<<<< HEAD
 ##mudanças de abordagens: ver como que funcionaria alternancia de fluxo de estudantes de entrada em uma tentativa de vcer o comportamento do modelo com uma divisão mais organizada de fluxo
 
 
+=======
+##mudanças de abordagens: ver como que funcionaria alternancia de fluxo de estudantes de entrada em uma tentativa de vcer o comportamento do modelo com uma divisão mais organizada de fluxo
+>>>>>>> 442f4f5e5fe500273ec84b99f7595d31c4d01d86
 from mesa import Model
 from mesa.time import RandomActivation
 from mesa.space import MultiGrid
@@ -13,12 +17,14 @@ from constants import *
 from agents import StudentAgent, StaticAgent, MovementUtils
 
 from openpyxl import Workbook, load_workbook
+import datetime
 
 class ModelText(TextElement):
     def __init__(self):
         pass
 
     def render(self, model):
+
         student_agents = [
             agent for agent in model.schedule.agents if isinstance(agent, StudentAgent)]
         avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
@@ -54,16 +60,31 @@ class ModelText(TextElement):
 
         # Se a última célula está vazia, não conta como usada
         if ws.cell(row=ultima_linha, column=1).value is not None:
-            nova_linha = ultima_linha + 1
-        else:
-            nova_linha = ultima_linha
+            # Sempre cria um novo arquivo ao iniciar uma nova execução do main.py
+            # Usa um nome de arquivo único baseado em timestamp
+            if not hasattr(model, 'result_file'):
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                model.result_file = f"valores_{timestamp}.xlsx"
+            arquivo = model.result_file
 
-        # Escreve o valor na nova linha da primeira coluna
-        ws.cell(row=nova_linha, column=1, value=waiting_time_until_tray)
-        ws.cell(row=nova_linha, column=2, value=avg_waiting_time_total)
+            if os.path.exists(arquivo):
+                wb = load_workbook(arquivo)
+                ws = wb.active
+            else:
+                wb = Workbook()
+                ws = wb.active
 
-        # Salva o arquivo
-        wb.save(arquivo)
+            ultima_linha = ws.max_row
+
+            if ws.cell(row=ultima_linha, column=1).value is not None:
+                nova_linha = ultima_linha + 1
+            else:
+                nova_linha = ultima_linha
+
+            ws.cell(row=nova_linha, column=1, value=waiting_time_until_tray)
+            ws.cell(row=nova_linha, column=2, value=avg_waiting_time_total)
+
+            wb.save(arquivo)
         
         return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio(pra qualquer coisa): {avg_waiting_time} | Tempo de fila antes da rampa(): {(waiting_time_until_tray)}  | Tempo de espera medio(ao longo de todo o período): {avg_waiting_time_total} "
 class RestaurantModel(Model):
@@ -87,6 +108,7 @@ class RestaurantModel(Model):
     }
 
     def __init__(self, external_grid, day, meal, hour, filtered_df):
+        super().__init__()  # inicializa a superclasse Model do Mesa
         self.height = len(external_grid)
         self.width = len(external_grid[0])
         self.external_grid = external_grid
@@ -126,6 +148,14 @@ class RestaurantModel(Model):
             'tables': self.find_cell_positions(CellType.TABLE),
             'exits': self.find_cell_positions(CellType.EXIT)
         }
+
+        # self.linha_fora_RU_1 = []
+        # self.linha_fora_RU_2 = []
+        # self.linha_fora_RU_3 = []
+        # self.linha_fora_RU_4 = []
+        self.linha_fora_RU_dir = []  # Linha de estudantes fora do RU, entrada direita
+        self.linha_fora_RU_esq = []  # Linha de estudantes fora do RU, entrada esquerda
+
         for y, row in enumerate(external_grid):
             for x, cell_value in enumerate(row):
                 if cell_value in self.AGENT_TYPE_MAPPING:
@@ -150,6 +180,8 @@ class RestaurantModel(Model):
         matching_rows = self.filtered_df[self.filtered_df['seconds_from_start'] == self.time]
         for _, row in matching_rows.iterrows():
             self.add_new_student(catraca_id=row['IDCatraca'])
+        
+        self.put_students_in_line() # colocar um estudante depois da catraca, se houver um na fila
 
         self.datacollector.collect(self)
 
@@ -176,7 +208,10 @@ class RestaurantModel(Model):
         if self.num_students >= 10000:
             return
 
-        
+        #1 é a catraca inferior da direita
+        #2 é a catraca superior da direita
+        #3 é a catraca inferior da esquerda
+        #4 é a catraca superior da esquerda
         catraca_mapping = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
         entry_coords = [(18, 2), (18, 4), (99, 2), (99, 4)]
 
@@ -185,18 +220,66 @@ class RestaurantModel(Model):
             print(
                 f"Warning: Catraca ID {catraca_id} not found in mapping. Choosing random entry.")
             chosen_entry = self.random.choice(entry_coords)
+        
+        print(f"Estudante Chegou na fila da catraca {catraca_id} ({chosen_entry})")
+        student_id = self.get_next_id()
+        student = StudentAgent(student_id, self, *chosen_entry)
 
-        if not self.grid.get_cell_list_contents([chosen_entry]):
-            print(f"Adding student at {chosen_entry}...")
-            student_id = self.get_next_id()
-            student = StudentAgent(student_id, self, *chosen_entry)
-            self.grid.place_agent(student, chosen_entry)
-            self.schedule.add(student)
-            self.num_students += 1
-            self.num_students_total += 1
+        if chosen_entry == (99, 2) or chosen_entry == (99, 4):
+            self.linha_fora_RU_dir.append(student)
+
+        elif chosen_entry == (18, 2) or chosen_entry == (18, 4):
+            self.linha_fora_RU_esq.append(student)
+        
+        self.num_students += 1
+        self.num_students_total += 1
 
         print(f"Trying to add a new student at {chosen_entry}")
 
+
+    def put_students_in_line(self):
+        for idx, line in enumerate([self.linha_fora_RU_dir, self.linha_fora_RU_esq]):
+            if line:
+                if idx == 0: # linha_fora_RU_dir
+                    pos_x = 99
+                elif idx == 1: # linha_fora_RU_esq
+                    pos_x = 18
+
+                if self.grid.is_cell_empty((pos_x, 2)) and self.grid.is_cell_empty((pos_x, 4)):
+                    pos_y = np.random.choice([2, 4])
+                    student = line.pop(0)
+                    student.pos = (pos_x, pos_y)
+
+                    print(f"Placing student {student.unique_id} at ({student.pos})")
+                    self.grid.place_agent(student, (student.pos))
+                    self.schedule.add(student)
+                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+                elif self.grid.is_cell_empty((pos_x, 2)):
+                    student = line.pop(0)
+                    student.pos = (pos_x, 2)
+
+                    print(f"Placing student {student.unique_id} at ({student.pos})")
+                    self.grid.place_agent(student, (student.pos))
+                    self.schedule.add(student)
+                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+                elif self.grid.is_cell_empty((pos_x, 4)):
+                    student = line.pop(0)
+                    student.pos = (pos_x, 4)
+
+                    print(f"Placing student {student.unique_id} at ({student.pos})")
+                    self.grid.place_agent(student, (student.pos))
+                    self.schedule.add(student)
+                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+                else:
+                    waiting_student = line[0]  # referência ao primeiro da fila sem remover
+                    print(f"Cell ({waiting_student.pos}) is not empty, cannot place student {waiting_student.unique_id}.")
+
+                for student in line:    
+                    #print(f"Student {student.unique_id} is still waiting in line.")
+                    student.waiting_time_until_tray += 1
+
+            else:
+                print("No students in line to place.")
     def get_free_tables(self, student_pos):
         tables = []
         for table in self.locations_cache['tables']:

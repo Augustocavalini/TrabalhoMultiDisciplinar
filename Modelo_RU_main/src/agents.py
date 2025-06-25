@@ -4,11 +4,15 @@
 ##caso possivel mexer na variavel time_until_tray para dividi-la em 6 e avaliar o tempo de espera para cada uma das trays.
 ##mexer nas constantes como DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD, TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 442f4f5e5fe500273ec84b99f7595d31c4d01d86
 from mesa import Agent
 import random
 from mapa.paths import PATHS_CATRACAS
+from mapa.paths import COMMOM_PATH_CATRACA
 from constants import  WAITING_TIME_THRESHOLD
 from mapa.mapa_RU import CellType
 from mesa.space import MultiGrid
@@ -67,6 +71,7 @@ class StudentAgent(Agent):
         self.current_goal = None
         self.current_path = None
         self.interaction_timer = 0
+        self.terminou_path_local = False
         self.terminou_path = False
         self.ta_na_mesa = False
         self.interaction_table_timer = -1
@@ -74,7 +79,8 @@ class StudentAgent(Agent):
         self.move_attempts = []
         self.path_occupancy = {}
         self._initialize_preferences()
-        self.determine_catraca_id()
+        # self.determine_catraca_id()
+        self.catraca_id = None
 
     def escolher_arroz(self):
         opcoes = ["rice", "brown_rice", "no_rice"]
@@ -143,6 +149,14 @@ class StudentAgent(Agent):
             # print(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
+    def _choose_common_path(self):
+        self.current_path = COMMOM_PATH_CATRACA.get(self.catraca_id, None)
+        if not self.current_path:
+            print(f"Warning: No common path found for catraca_id {self.catraca_id}.")
+            return None
+
+
+
     # VISTA 
     def _choose_empty_path(self):
         self.update_path_occupancy()
@@ -166,7 +180,7 @@ class StudentAgent(Agent):
     # VISTA
     def update_path_occupancy(self):
         self.path_occupancy = {}
-        for path_name in PATHS_CATRACAS.keys():
+        for path_name in COMMOM_PATH_CATRACA.keys():
             occupancy = len([agent for agent in self.model.schedule.agents if isinstance(
                 agent, StudentAgent) and agent.current_path == path_name])
             self.path_occupancy[path_name] = occupancy
@@ -211,7 +225,9 @@ class StudentAgent(Agent):
                         self.blocked_steps += 1
                 else:
                     print(f"Agent {self.unique_id} has reached the end of path {self.current_path}")
-                    self.terminou_path = True
+                    self.terminou_path_local = True
+                    # quando chegar ao final do último path do modelo:
+                    # self.terminou_path = True
             else:
                 print(f"Agent {self.unique_id} has no more steps to follow in path {self.current_path}")
         
@@ -222,7 +238,9 @@ class StudentAgent(Agent):
 
     def step(self):
         if not self.current_path:
-            self.current_path = self._choose_empty_path()
+            self.determine_catraca_id()
+            # self.current_path = self._choose_empty_path()
+            self.current_path = self._choose_common_path()
         else:
             if self.terminou_path:
                 if self.interaction_table_timer != -1:
@@ -236,6 +254,11 @@ class StudentAgent(Agent):
                     if table:
                         self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
                         self.teleport_to_table(table)
+
+            elif self.terminou_path_local:
+                # escolher o novo path local
+                self.terminou_path_local = False
+                pass
             
             elif self.interaction_timer > 0:
                 self.interaction_timer -= 1
