@@ -246,6 +246,7 @@ class RestaurantModel(Model):
                     self.grid.place_agent(student, (student.pos))
                     self.schedule.add(student)
                     print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+
                 elif self.grid.is_cell_empty((pos_x, 2)):
                     student = line.pop(0)
                     student.pos = (pos_x, 2)
@@ -254,6 +255,7 @@ class RestaurantModel(Model):
                     self.grid.place_agent(student, (student.pos))
                     self.schedule.add(student)
                     print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+
                 elif self.grid.is_cell_empty((pos_x, 4)):
                     student = line.pop(0)
                     student.pos = (pos_x, 4)
@@ -262,6 +264,7 @@ class RestaurantModel(Model):
                     self.grid.place_agent(student, (student.pos))
                     self.schedule.add(student)
                     print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
+                    
                 else:
                     waiting_student = line[0]  # referência ao primeiro da fila sem remover
                     print(f"Cell ({waiting_student.pos}) is not empty, cannot place student {waiting_student.unique_id}.")

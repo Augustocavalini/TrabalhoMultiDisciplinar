@@ -1,7 +1,7 @@
 
 from mesa import Agent
 import random
-from mapa.paths import PATHS_CATRACAS
+from mapa.paths import PATHS_CATRACAS, PATHS_CATRACAS2
 from mapa.paths import COMMOM_PATH_CATRACA
 from constants import  WAITING_TIME_THRESHOLD
 from mapa.mapa_RU import CellType
@@ -142,32 +142,53 @@ class StudentAgent(Agent):
             self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
     def _choose_common_path(self):
-        self.current_path = COMMOM_PATH_CATRACA.get(self.catraca_id, None)
-        if not self.current_path:
-            print(f"Warning: No common path found for catraca_id {self.catraca_id}.")
+        current_path_chosen = COMMOM_PATH_CATRACA.get(self.catraca_id, None)
+        if not current_path_chosen:
+            print(f"Warning: No common path found for catraca_id {self.catraca_id}, {self.pos}.")
             return None
+        
+        return current_path_chosen
 
 
     def _choose_optimal_path(self):
-        if self.catraca_id in [1, 2]: #estou no lado esquerdo
-            choosen_path = random.choice(list(PATHS_CATRACAS2.keys())[0:6]) #escolho os paths do lado esquerdo
-            
-            
-        elif self.catraca_id in [3, 4]: #estou no lado direito
-            choosen_path = random.choice(list(PATHS_CATRACAS2.keys())[6:12]) #escolho os paths do lado direito
+        if self.catraca_id in [1, 2]:  # Lado esquerdo
+            path_keys = list(PATHS_CATRACAS2.keys())[0:6]
+        elif self.catraca_id in [3, 4]:  # Lado direito
+            path_keys = list(PATHS_CATRACAS2.keys())[6:12]
         else:
             print(f"Warning: Invalid catraca_id {self.catraca_id}.")
             return None
-        
-        move = choosen_path[0]
-        if self.model.is_cell_empty(move, self.pos):
-            self.model.grid.move_agent(self, move)
-        
-        else:
-            print(f"Warning: Cell {move} is occupied, cannot move agent {self.unique_id}.")
-            return None           
-            
-        return choosen_path
+
+        path_occupancy = []
+
+        for key in path_keys:
+            path = PATHS_CATRACAS2.get(key, [])
+            if not path:
+                continue  # Pula paths vazios
+
+            total_positions = len(path)
+            occupied_count = 0
+
+            for cell in path:
+                agents_in_cell = self.model.grid.get_cell_list_contents([cell])
+                
+                agents_in_cell = [agent for agent in agents_in_cell if agent != self]
+                occupied_count += len(agents_in_cell)
+
+            relative_occupancy = occupied_count / total_positions
+            path_occupancy.append((key, relative_occupancy))
+
+        if not path_occupancy:
+            print(f"Warning: No valid paths found for catraca_id {self.catraca_id}.")
+            return None
+
+        # Ordena por menor ocupação relativa
+        path_occupancy.sort(key=lambda item: item[1])
+        best_path_key = path_occupancy[0][0]
+
+        print(f"Agent {self.unique_id} escolheu path '{best_path_key}' com ocupação relativa {path_occupancy[0][1]:.2f}")
+        return best_path_key
+
 
     # VISTA 
     # def _choose_empty_path(self):
@@ -202,65 +223,163 @@ class StudentAgent(Agent):
         for catraca_id, catraca_position in CATRACA_MAPPING.items():
             if self.pos == catraca_position:
                 self.catraca_id = catraca_id
+                
 
     # VISTA
-    def move_to_next_step(self):
+    # def move_to_next_step(self):
         
+    #     if self.current_path:
+    #         if self.at_common_path:
+    #             path_coordinates = COMMOM_PATH_CATRACA.get(self.catraca_id, None)
+                
+    #             print(f"Agent {self.unique_id} is at common path {self.current_path} with coordinates {path_coordinates}")
+
+    #             if not path_coordinates:
+    #                 print(f"Warning: No common path found for catraca_id {self.catraca_id}, {self.pos}.")
+    #                 return
+
+    #             if not path_coordinates:
+    #                 print(f"Warning: No common path found for catraca_id {self.catraca_id}.")
+
+    #         else:
+    #             path_coordinates = PATHS_CATRACAS2.get(self.current_path, [])
+
+    #         if path_coordinates:
+    #             if len(path_coordinates) > self.steps_visited:
+    #                 next_step = path_coordinates[self.steps_visited]
+    #                 x, y = next_step
+
+    #                 next_step_occupied = any(agent.pos == (x, y) for agent in self.model.schedule.agents)
+                    
+    #                 if not next_step_occupied:
+    #                     # Check if it's time to move (every 3 seconds)
+    #                     if self.blocked_steps % 3 == 0:
+    #                         self.model.grid.move_agent(self, (x, y))
+    #                         self.move_attempts.append({
+    #                             "from": self.pos,
+    #                             "to": (x, y),
+    #                         })
+    #                         print(f"Agent {self.unique_id} moved to {x, y} after three attempts.")
+                            
+    #                         self.steps_visited += 1
+    #                         self.blocked_steps = 0
+    #                     else:
+    #                         self.blocked_steps += 1 
+                            
+    #                 else:
+    #                     if self.pos == (99, 2):
+    #                             print(f'\n  ESTUDANTE PRESO na posição {x,y} com path {self.current_path} e com nextstep {next_step}\n')
+    #                     self.blocked_steps += 1
+    #             else:
+    #                 print(f"Agent {self.unique_id} has reached the end of path {self.current_path}")
+    #                 self.terminou_path_local = True
+    #                 self.steps_visited = 0
+    #                 self.blocked_steps = 0
+    #                     # self.current_path = None
+    #                 # quando chegar ao final do último path do modelo:
+    #                 # self.terminou_path = True
+    #         else:
+    #             print(f"Agent {self.unique_id} has no more steps to follow in path {self.current_path}")
+        
+    #     else:
+    #         print(f"Agent {self.unique_id} has no current path to follow.")
+
+    def move_to_next_step(self):
         if self.current_path:
             if self.at_common_path:
-                self.current_path = COMMOM_PATH_CATRACA.get(self.catraca_id, None)
-                if not self.current_path:
-                    print(f"Warning: No common path found for catraca_id {self.catraca_id}.")
+                path_coordinates = COMMOM_PATH_CATRACA.get(self.catraca_id, [])
             else:
-                path_coordinates = PATHS_CATRACAS.get(self.current_path, [])
-            if path_coordinates:
-                if len(path_coordinates) > self.steps_visited:
-                    next_step = path_coordinates[self.steps_visited]
-                    x, y = next_step
-                    next_step_occupied = any(agent.pos == (x, y) for agent in self.model.schedule.agents)
-                    
-                    # Calculate the number of steps for 1-meter movement 
-                    steps_per_meter = 1
-                    
-                    if not next_step_occupied:
-                        # Check if it's time to move (every 3 seconds)
-                        if self.blocked_steps % 3 == 0:
-                            self.model.grid.move_agent(self, (x, y))
-                            self.move_attempts.append({
-                                "from": self.pos,
-                                "to": (x, y),
-                            })
-                            
-                            self.steps_visited += 1
-                            self.blocked_steps = 0
-                        else:
-                            self.blocked_steps += 1 
-                            
+                path_coordinates = PATHS_CATRACAS2.get(self.current_path, [])
+
+            if not path_coordinates:
+                print(f"Warning: No coordinates found for path {self.current_path}")
+                return
+
+            if self.steps_visited < len(path_coordinates):
+                next_step = path_coordinates[self.steps_visited]
+                x, y = next_step
+
+                next_step_occupied = any(agent.pos == (x, y) for agent in self.model.schedule.agents)
+
+                if not next_step_occupied:
+                    if self.blocked_steps % 3 == 0:
+                        self.model.grid.move_agent(self, (x, y))
+                        self.move_attempts.append({"from": self.pos, "to": (x, y)})
+                        self.steps_visited += 1
+                        self.blocked_steps = 0
                     else:
-                        if self.pos == (99, 2):
-                                print(f'\n  ESTUDANTE PRESO na posição {x,y} com path {self.current_path} e com nextstep {next_step}\n')
                         self.blocked_steps += 1
                 else:
-                    print(f"Agent {self.unique_id} has reached the end of path {self.current_path}")
-                    self.terminou_path_local = True
-                    self.steps_visited = 0
-                    self.blocked_steps = 0
-                        # self.current_path = None
-                    # quando chegar ao final do último path do modelo:
-                    # self.terminou_path = True
+                    self.blocked_steps += 1
+                    if self.pos == (99, 2):
+                        print(f'\n  ESTUDANTE PRESO na posição {x,y} com path {self.current_path} e com nextstep {next_step}\n')
             else:
-                print(f"Agent {self.unique_id} has no more steps to follow in path {self.current_path}")
-        
+                print(f"Agent {self.unique_id} has reached the end of path {self.current_path}")
+                self.terminou_path_local = True
+                self.steps_visited = 0
+                self.blocked_steps = 0
         else:
             print(f"Agent {self.unique_id} has no current path to follow.")
 
 
 
+    # def step(self):
+    #     if not self.current_path:
+    #         self.determine_catraca_id()
+    #         # self.current_path = self._choose_empty_path()
+    #         self.current_path = self._choose_common_path()
+    #         print(f"Agent {self.unique_id} chose path {self.current_path} at position {self.pos}")
+    #     else:
+    #         if self.terminou_path:
+    #             if self.interaction_table_timer != -1:
+    #                 self.interaction_table_timer -= 1
+    #                 if self.interaction_table_timer == -1:
+    #                     self.model.num_students -= 1
+    #                     self.model.schedule.remove(self)
+    #                     self.model.grid.remove_agent(self)
+    #             else:
+    #                 table = self.find_nearest_free_table()
+    #                 if table:
+    #                     self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
+    #                     self.teleport_to_table(table)
+
+    #         elif self.terminou_path_local:
+    #             # escolher o novo path local
+    #             self.terminou_path_local = False
+  
+    #             if self.at_common_path:
+    #                 self.current_path = self._choose_optimal_path()
+  
+    #                 # self.current_path = self._choose_empty_path()
+  
+    #                 if not self.current_path:
+    #                     print(f"Agent {self.unique_id} found no valid path to follow.")
+    #                     return
+                        
+
+    #                 self.at_common_path = False
+            
+    #         elif self.interaction_timer > 0:
+    #             self.interaction_timer -= 1
+    #             self.waiting_time += 1
+            
+    #         elif self.interaction_timer == 0:
+    #             print(f"Agent {self.unique_id} has interaction timer at 0, checking tray interaction.")
+    #             self.waiting_time += 1
+
+    #             if self.flag_until_tray:
+    #                 self.waiting_time_until_tray += 1
+
+    #             self.check_tray_interaction()
+    #             print(f"Agent {self.unique_id} ENTRARA NA FUNÇÃO MOVE TO NEXT STEP")
+    #             self.move_to_next_step()
     def step(self):
         if not self.current_path:
             self.determine_catraca_id()
-            # self.current_path = self._choose_empty_path()
             self.current_path = self._choose_common_path()
+            self.at_common_path = True
+            self.steps_visited = 0
+            print(f"Agent {self.unique_id} chose common path {self.current_path} at position {self.pos}")
         else:
             if self.terminou_path:
                 if self.interaction_table_timer != -1:
@@ -276,31 +395,25 @@ class StudentAgent(Agent):
                         self.teleport_to_table(table)
 
             elif self.terminou_path_local:
-                # escolher o novo path local
                 self.terminou_path_local = False
-  
+
                 if self.at_common_path:
                     self.current_path = self._choose_optimal_path()
-  
-                    # self.current_path = self._choose_empty_path()
-  
                     if not self.current_path:
                         print(f"Agent {self.unique_id} found no valid path to follow.")
                         return
-                        
-
                     self.at_common_path = False
-            
+                    self.steps_visited = 0  # Reset aqui!
+                else:
+                    self.terminou_path = True  # sinaliza fim do movimento no segundo path
+
             elif self.interaction_timer > 0:
                 self.interaction_timer -= 1
                 self.waiting_time += 1
-            
-            elif self.interaction_timer == 0:
-                self.waiting_time += 1
 
+            elif self.interaction_timer == 0:
                 if self.flag_until_tray:
                     self.waiting_time_until_tray += 1
-
                 self.check_tray_interaction()
                 self.move_to_next_step()
 
