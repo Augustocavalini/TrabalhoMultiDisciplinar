@@ -1,8 +1,7 @@
 
 from mesa import Agent
 import random
-from mapa.paths import PATHS_CATRACAS, PATHS_CATRACAS2
-from mapa.paths import COMMOM_PATH_CATRACA
+from mapa.paths import PATHS_CATRACAS2, PATHS_END_CONDESERT, PATHS_END_DESSERT, PATHS_TRAY_JUICE, PATHS_TRAY_NO_JUICE, PATHS_END_NOTHING, PATHS_END_COND, COMMON_PATH_CATRACA
 from constants import  WAITING_TIME_THRESHOLD
 from mapa.mapa_RU import CellType
 from mesa.space import MultiGrid
@@ -21,6 +20,8 @@ DEFAULT_TRAY_PORTIONS = 100
 DEFAULT_TRAY_PORTIONS_STD = 15
 TRAY_INTERACTION_TIME = 15
 TRAY_INTERACTION_TIME_STD = 3
+JUICE_INTERACTION_TIME = 4
+JUICE_INTERACTION_TIME_STD = 2
 
 
 class StaticAgent(Agent):
@@ -70,6 +71,12 @@ class StudentAgent(Agent):
         # self.determine_catraca_id()
         self.catraca_id = None
 
+        self.at_rampa_path = False
+        self.at_juice_path = False
+        self.at_end_path = False
+        self.interacted_w_juice = False
+
+
         self.terminou_path_local = False
         self.terminou_path = False
         self.at_common_path = True
@@ -84,12 +91,32 @@ class StudentAgent(Agent):
         probabilidades = [0.05, 0.95, 0]
         return random.choices(opcoes, weights=probabilidades, k=1)[0]
     
+    def escolher_suco(self):
+        opcoes = [1, 0]
+        probabilidades = [0.5012468828, 0.4987531172]
+        return random.choices(opcoes, weights=probabilidades, k=1)[0]
+    
+    def escolher_sobremesa(self):
+        opcoes = [1, 0]
+        probabilidades = [0.8447630923, (1-0.8447630923)]
+        return random.choices(opcoes, weights=probabilidades, k=1)[0]
+    
+    def escolher_condimentos(self):
+        opcoes = [1, 0]
+        probabilidades = [0.6789276808, (0.3210723192)]
+        return random.choices(opcoes, weights=probabilidades, k=1)[0]
+    
     def _initialize_preferences(self):
         self.diet = self.escolher_dieta()
         self.rice_type = self.escolher_arroz()
+        self.juice = self.escolher_suco()
+        self.sobremesa = self.escolher_sobremesa()
+        self.condimentos = self.escolher_condimentos()
 
+        
     # VISTA
     def check_tray_interaction(self):
+        
         x, y = self.pos
         upper_cell = (x, y - 1)
         lower_cell = (x, y + 1)
@@ -106,7 +133,60 @@ class StudentAgent(Agent):
         else:
             self.move_to_next_step()
 
-    def check_tray_type(self, cell):
+    def check_juice_interaction(self):
+        x, y = self.pos
+
+        lower_cell = (x, y + 1)
+        left_cell = (x - 1, y)
+        right_cell = (x + 1, y)
+
+        left_station = self.check_tray_type(left_cell, TRAY_TYPES={'Juice'})
+        right_station = self.check_tray_type(right_cell, TRAY_TYPES={'Juice'})
+        
+        is_lower_cell_final = lower_cell in [path[-1] for path in PATHS_TRAY_JUICE.values()]
+        is_lower_cell_empty = len(self.model.grid.get_cell_list_contents([lower_cell])) == 0
+
+        if self.interacted_w_juice:
+            return
+        
+        elif not is_lower_cell_final and is_lower_cell_empty:
+            self.move_to_next_step()
+            
+        elif is_lower_cell_final:
+            if self.juice == 1 and (left_station or right_station):
+                if left_station:
+                    self.tray_interaction_target = 'Juice'
+                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    # self.juice = 0
+                    self.interacted_w_juice = True
+
+                elif right_station:
+                    self.tray_interaction_target = 'Juice'
+                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    #self.flag_until_tray = False
+                    self.interacted_w_juice = True
+            else:
+                self.move_to_next_step()
+
+        elif is_lower_cell_empty > 0:
+            if self.juice == 1 and (left_station or right_station):
+                if left_station:
+                    self.tray_interaction_target = 'Juice'
+                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    #self.flag_until_tray = False
+                    self.interacted_w_juice = True
+
+                elif right_station:
+                    self.tray_interaction_target = 'Juice'
+                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    #self.flag_until_tray = False
+                    self.interacted_w_juice = True
+            else:
+                self.move_to_next_step()
+
+
+
+    def check_tray_type(self, cell, TRAY_TYPES=TRAY_TYPES):
         tray = next((agent for agent in self.model.grid.get_cell_list_contents([cell]) if
                     isinstance(agent, StaticAgent) and agent.type in TRAY_TYPES), None)
         return tray.type if tray else None
@@ -140,9 +220,22 @@ class StudentAgent(Agent):
             self.tray_interaction_target = tray_type
             # print(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+            
+        # if self.juice == 1:
+        #     self.tray_interaction_target = 'Juice'
+        #     self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+        
+        # if self.sobremesa == 1:
+        #     self.tray_interaction_target = 'Dessert'
+        #     self.interaction_timer = int(max(3, np.random.normal(DESSERT_INTERACTION_TIME, DESSERT_INTERACTION_TIME_STD)))
+            
+        # if self.condimentos == 1:
+        #     self.tray_interaction_target = 'Spices'
+        #     self.interaction_timer = int(max(3, np.random.normal(SPICES_INTERACTION_TIME, SPICES_INTERACTION_TIME_STD)))
+                
 
     def _choose_common_path(self):
-        current_path_chosen = COMMOM_PATH_CATRACA.get(self.catraca_id, None)
+        current_path_chosen = COMMON_PATH_CATRACA.get(self.catraca_id, None)
         if not current_path_chosen:
             print(f"Warning: No common path found for catraca_id {self.catraca_id}, {self.pos}.")
             return None
@@ -171,8 +264,6 @@ class StudentAgent(Agent):
 
             for cell in path:
                 agents_in_cell = self.model.grid.get_cell_list_contents([cell])
-                
-                agents_in_cell = [agent for agent in agents_in_cell if agent != self]
                 occupied_count += len(agents_in_cell)
 
             relative_occupancy = occupied_count / total_positions
@@ -186,8 +277,73 @@ class StudentAgent(Agent):
         path_occupancy.sort(key=lambda item: item[1])
         best_path_key = path_occupancy[0][0]
 
+        print(path_occupancy)
+
+        count_path = path_occupancy.count((best_path_key, path_occupancy[0][1]))
+        if count_path > 1:
+            print("Warning: Multiple paths with the same occupancy found.")
+            # If there are multiple paths with the same occupancy, choose one randomly
+            best_path_key = random.choice([key for key, occupancy in path_occupancy if occupancy == path_occupancy[0][1]])
+
         print(f"Agent {self.unique_id} escolheu path '{best_path_key}' com ocupação relativa {path_occupancy[0][1]:.2f}")
         return best_path_key
+
+
+    def _choose_juice_path(self):
+
+        # if self.juice:
+        #     if self.catraca_id in [1, 2]:  # Lado esquerdo
+        #         path_keys = list(PATHS_TRAY_JUICE.keys())[0:6]
+        #     elif self.catraca_id in [3, 4]:  # Lado direito
+        #         path_keys = list(PATHS_CATRACAS2.keys())[6:12]
+        #     else:
+        #         print(f"Warning: Invalid catraca_id {self.catraca_id}.")
+        #         return None
+        # else:
+        #     if self.catraca_id in [1, 2]:  # Lado esquerdo
+        #         path_keys = list(PATHS_TRAY_NO_JUICE.keys())[0:6]
+        #     elif self.catraca_id in [3, 4]:  # Lado direito
+        #         path_keys = list(PATHS_TRAY_NO_JUICE.keys())[6:12]
+        #     else:
+        #         print(f"Warning: Invalid catraca_id {self.catraca_id}.")
+        #         return None
+
+        return "J" + (str(self.current_path)) if self.juice else "NJ" + (str(self.current_path))
+
+
+    def _choose_end_path(self):
+        
+        if self.catraca_id in [1, 2]:  # Lado esquerdo
+            if self.sobremesa and not self.condimentos:
+                path_key = list(PATHS_END_DESSERT.keys())[0]
+
+            elif self.condimentos and not self.sobremesa:
+                path_key = list(PATHS_END_COND.keys())[0]
+
+            elif self.sobremesa and self.condimentos:
+                path_key = list(PATHS_END_CONDESERT.keys())[0]
+                
+            else:
+                path_key = list(PATHS_END_NOTHING.keys())[0]
+
+        elif self.catraca_id in [3, 4]:  # Lado direito
+            if self.sobremesa and not self.condimentos:
+                path_key = list(PATHS_END_DESSERT.keys())[1]
+
+            elif self.condimentos and not self.sobremesa:
+                path_key = list(PATHS_END_COND.keys())[1]
+
+            elif self.sobremesa and self.condimentos:
+                path_key = list(PATHS_END_CONDESERT.keys())[1]
+                
+            else:
+                path_key = list(PATHS_END_NOTHING.keys())[1]
+
+        else:
+            print(f"Warning: Invalid catraca_id {self.catraca_id}.")
+            return None
+
+        return path_key
 
 
     # VISTA 
@@ -287,9 +443,26 @@ class StudentAgent(Agent):
     def move_to_next_step(self):
         if self.current_path:
             if self.at_common_path:
-                path_coordinates = COMMOM_PATH_CATRACA.get(self.catraca_id, [])
-            else:
+                path_coordinates = COMMON_PATH_CATRACA.get(self.catraca_id, [])
+
+            elif self.at_rampa_path:
                 path_coordinates = PATHS_CATRACAS2.get(self.current_path, [])
+                
+            elif self.at_juice_path:
+                if self.juice:
+                    path_coordinates = PATHS_TRAY_JUICE.get(self.current_path, [])
+                else:
+                    path_coordinates = PATHS_TRAY_NO_JUICE.get(self.current_path, [])
+                    
+            elif self.at_end_path:
+                if self.sobremesa and not self.condimentos:
+                    path_coordinates = PATHS_END_DESSERT.get(self.current_path, [])
+                elif self.condimentos and not self.sobremesa:
+                    path_coordinates = PATHS_END_COND.get(self.current_path, [])
+                elif self.sobremesa and self.condimentos:
+                    path_coordinates = PATHS_END_CONDESERT.get(self.current_path, [])
+                else:
+                    path_coordinates = PATHS_END_NOTHING.get(self.current_path, [])
 
             if not path_coordinates:
                 print(f"Warning: No coordinates found for path {self.current_path}")
@@ -311,8 +484,6 @@ class StudentAgent(Agent):
                         self.blocked_steps += 1
                 else:
                     self.blocked_steps += 1
-                    if self.pos == (99, 2):
-                        print(f'\n  ESTUDANTE PRESO na posição {x,y} com path {self.current_path} e com nextstep {next_step}\n')
             else:
                 print(f"Agent {self.unique_id} has reached the end of path {self.current_path}")
                 self.terminou_path_local = True
@@ -403,9 +574,30 @@ class StudentAgent(Agent):
                         print(f"Agent {self.unique_id} found no valid path to follow.")
                         return
                     self.at_common_path = False
+                    self.at_rampa_path = True
                     self.steps_visited = 0  # Reset aqui!
+
+                elif self.at_rampa_path:
+                    self.current_path = self._choose_juice_path()
+                    if not self.current_path:
+                        print(f"Agent {self.unique_id} found no valid path to follow.")
+                        return
+                    self.at_rampa_path = False
+                    self.at_juice_path = True
+                    self.steps_visited = 0  # Reset aqui!
+                
+                elif self.at_juice_path:
+                    self.current_path = self._choose_end_path()
+                    if not self.current_path:
+                        print(f"Agent {self.unique_id} found no valid path to follow.")
+                        return
+                    self.at_juice_path = False
+                    self.at_end_path = True
+                    self.steps_visited = 0  # Reset aqui!
+
                 else:
                     self.terminou_path = True  # sinaliza fim do movimento no segundo path
+
 
             elif self.interaction_timer > 0:
                 self.interaction_timer -= 1
@@ -414,7 +606,12 @@ class StudentAgent(Agent):
             elif self.interaction_timer == 0:
                 if self.flag_until_tray:
                     self.waiting_time_until_tray += 1
-                self.check_tray_interaction()
+                if self.at_rampa_path:
+                    self.check_tray_interaction()
+                elif self.at_juice_path:
+                    self.check_juice_interaction()
+                # elif self.at_end_path:
+                #     self.check_end_interaction()
                 self.move_to_next_step()
 
 

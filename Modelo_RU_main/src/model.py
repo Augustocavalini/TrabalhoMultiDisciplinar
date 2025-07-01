@@ -77,8 +77,8 @@ class ModelText(TextElement):
             ws.cell(row=nova_linha, column=2, value=avg_waiting_time_total)
 
             wb.save(arquivo)
-        
-        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio(pra qualquer coisa): {avg_waiting_time} | Tempo de fila antes da rampa(): {(waiting_time_until_tray)}  | Tempo de espera medio(ao longo de todo o período): {avg_waiting_time_total} "
+
+        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio(pra qualquer coisa): {avg_waiting_time:.2f} | Tempo de fila antes da rampa(): {waiting_time_until_tray:.2f}  | Tempo de espera medio(ao longo de todo o período): {avg_waiting_time_total:.2f} "
 class RestaurantModel(Model):
     AGENT_TYPE_MAPPING = {
         CellType.TURNSTILE: 'Turnstile',
