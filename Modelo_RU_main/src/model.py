@@ -78,7 +78,18 @@ class ModelText(TextElement):
 
             wb.save(arquivo)
 
-        return f"Current Hour: {model.get_human_readable_time()}  | Estudantes: {model.num_students} |  Tempo de espera medio(pra qualquer coisa): {avg_waiting_time:.2f} | Tempo de fila antes da rampa(): {waiting_time_until_tray:.2f}  | Tempo de espera medio(ao longo de todo o período): {avg_waiting_time_total:.2f} "
+        # Real-time charting is not natively supported in Mesa's TextElement.
+        # For now, we improve the text formatting and show times in minutes, aligned to the left.
+
+        return (
+            f"<div style='text-align:left; font-family:monospace;'>"
+            f"<b>Hora Atual:</b> {model.get_human_readable_time()}<br>"
+            f"<b>Estudantes no RU:</b> {model.num_students}<br>"
+            f"<b>Tempo médio de espera (qualquer coisa):</b> {avg_waiting_time/60.:.2f} min<br>"
+            f"<b>Tempo de fila antes da rampa:</b> {waiting_time_until_tray/60.:.2f} min<br>"
+            f"<b>Tempo médio de espera (total):</b> {avg_waiting_time_total/60.:.2f} min"
+            f"</div>"
+        )
 class RestaurantModel(Model):
     AGENT_TYPE_MAPPING = {
         CellType.TURNSTILE: 'Turnstile',
