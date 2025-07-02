@@ -18,9 +18,9 @@ TRAY_TYPES = {'Rice_tray', 'Brown_Rice_Tray', 'Beans_Tray',
 
 DEFAULT_TRAY_PORTIONS = 100
 DEFAULT_TRAY_PORTIONS_STD = 15
-TRAY_INTERACTION_TIME = 15
-TRAY_INTERACTION_TIME_STD = 3
-JUICE_INTERACTION_TIME = 4
+TRAY_INTERACTION_TIME = 6
+TRAY_INTERACTION_TIME_STD = 2
+JUICE_INTERACTION_TIME = 8
 JUICE_INTERACTION_TIME_STD = 2
 
 
@@ -153,7 +153,7 @@ class StudentAgent(Agent):
             self.move_to_next_step()
             
         elif is_lower_cell_final:
-            if self.juice == 1 and (left_station or right_station):
+            if (left_station or right_station):
                 if left_station:
                     self.tray_interaction_target = 'Juice'
                     self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
@@ -168,21 +168,43 @@ class StudentAgent(Agent):
             else:
                 self.move_to_next_step()
 
+            
+
         elif is_lower_cell_empty > 0:
-            if self.juice == 1 and (left_station or right_station):
+            if (left_station or right_station):
+
+                current_juice_path = self.current_path
+                no_juice_path = 'N' + current_juice_path
+                nj_path_coords = PATHS_TRAY_NO_JUICE.get(no_juice_path, [])
+                # Procura o primeiro ponto livre no path de no juice a direita ou a esquerda
+
                 if left_station:
                     self.tray_interaction_target = 'Juice'
                     self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
                     #self.flag_until_tray = False
                     self.interacted_w_juice = True
 
+                    # if self.model.is_cell_empty(right_cell):
+                    self.model.grid.move_agent(self, right_cell)
+                    self.pos = right_cell
+                    self.current_path = no_juice_path
+                    self.steps_visited = nj_path_coords.index(right_cell) + 1
+
                 elif right_station:
                     self.tray_interaction_target = 'Juice'
                     self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
                     #self.flag_until_tray = False
                     self.interacted_w_juice = True
+
+                    # if self.model.is_cell_empty(left_cell):
+                    self.pos = left_cell
+                    self.current_path = no_juice_path
+                    self.steps_visited = nj_path_coords.index(left_cell) + 1
+
+                return
             else:
                 self.move_to_next_step()
+                
 
 
 
@@ -221,17 +243,6 @@ class StudentAgent(Agent):
             # print(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             
-        # if self.juice == 1:
-        #     self.tray_interaction_target = 'Juice'
-        #     self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
-        
-        # if self.sobremesa == 1:
-        #     self.tray_interaction_target = 'Dessert'
-        #     self.interaction_timer = int(max(3, np.random.normal(DESSERT_INTERACTION_TIME, DESSERT_INTERACTION_TIME_STD)))
-            
-        # if self.condimentos == 1:
-        #     self.tray_interaction_target = 'Spices'
-        #     self.interaction_timer = int(max(3, np.random.normal(SPICES_INTERACTION_TIME, SPICES_INTERACTION_TIME_STD)))
                 
 
     def _choose_common_path(self):
@@ -475,7 +486,7 @@ class StudentAgent(Agent):
                 next_step_occupied = any(agent.pos == (x, y) for agent in self.model.schedule.agents)
 
                 if not next_step_occupied:
-                    if self.blocked_steps % 3 == 0:
+                    if self.blocked_steps % 1 == 0:
                         self.model.grid.move_agent(self, (x, y))
                         self.move_attempts.append({"from": self.pos, "to": (x, y)})
                         self.steps_visited += 1
