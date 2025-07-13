@@ -46,18 +46,19 @@ class StaticAgent(Agent):
         else:
             return None
 
-    def refill(self):
-        if not self.is_refilling:
-            if "Tray" in self.type:
-                self.is_refilling = True
-                self.refill_timer = int(max(60, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
+    def step(self):
+        if  not self.is_refilling and self.food_count <= 0:
+            self.is_refilling = True
+            self.refill_timer = int(max(60, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
+
+        elif self.refill_timer > 0 and self.is_refilling:
+            self.refill_timer -= 1
+            if self.refill_timer == 0:
+                self.is_refilling = False
                 self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
                 print(f"Refilled {self.type} at position {self.x}, {self.y}")
 
-
-    def step(self):
-        if  not self.is_refilling and self.food_count <= 0:
-            self.refill()
+        
 
 
 class StudentAgent(Agent):
@@ -141,10 +142,11 @@ class StudentAgent(Agent):
         if tray:
             if tray.food_count == 0:
                 print("REFILL REFILL REFILL, AGENTES TEM QUE ESPERAR")
+                self.interaction_timer = -1  # Indica que o agente está esperando por um refill
                 return
             else:
+            # Bandeja disponível: interage normalmente
                 tray.food_count -= 1
-                # Bandeja disponível: interage normalmente
                 self.set_tray_interaction_target(tray.type)
                 self.flag_until_tray = False
         else:
