@@ -165,7 +165,7 @@ class RestaurantModel(Model):
                     agent_type = self.AGENT_TYPE_MAPPING[cell_value]
                     agent = StaticAgent((x, y), self, x, y, agent_type)
                     self.grid.place_agent(agent, (x, y))
-
+                    self.schedule.add(agent) 
     def step(self):
         """Defines the action taken in each time step of the simulation."""
         current_time = self.get_human_readable_time()

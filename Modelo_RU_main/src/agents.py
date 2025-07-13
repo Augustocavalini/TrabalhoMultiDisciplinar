@@ -18,9 +18,11 @@ TRAY_TYPES = {'Rice_tray', 'Brown_Rice_Tray', 'Beans_Tray',
 
 DEFAULT_TRAY_PORTIONS = 100
 DEFAULT_TRAY_PORTIONS_STD = 15
-TRAY_INTERACTION_TIME = 6
+DEFAULT_TRAY_PORTIONS_REFILL = 120
+DEFAULT_TRAY_PORTIONS_REFILL_STD = 40
+TRAY_INTERACTION_TIME = 10
 TRAY_INTERACTION_TIME_STD = 2
-JUICE_INTERACTION_TIME = 8
+JUICE_INTERACTION_TIME = 6
 JUICE_INTERACTION_TIME_STD = 2
 
 
@@ -30,21 +32,33 @@ class StaticAgent(Agent):
         self.x = pos_x
         self.y = pos_y
         self.type = agent_type
-        self.content = self._determine_content()
+        self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
+        self.content = self._determine_tray_type()
+        self.refill_timer = 0
+        self.is_refilling = False
 
-    def _determine_content(self):
+
+    def _determine_tray_type(self):
         if self.type == "EMPTY_TRAY":
             return "EMPTY"
         elif "Tray" in self.type:
-            self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
             return self.type.split('_')[0]
         else:
             return None
 
     def refill(self):
-        if "Tray" in self.type:
-            self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
-            print(f"Refilled {self.type} at position {self.x}, {self.y}")
+        if not self.is_refilling:
+            if "Tray" in self.type:
+                self.is_refilling = True
+                self.refill_timer = int(max(60, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
+                self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
+                print(f"Refilled {self.type} at position {self.x}, {self.y}")
+
+
+    def step(self):
+        if  not self.is_refilling and self.food_count <= 0:
+            self.refill()
+
 
 class StudentAgent(Agent):
     def __init__(self, unique_id, model, x, y):
@@ -116,20 +130,23 @@ class StudentAgent(Agent):
         
     # VISTA
     def check_tray_interaction(self):
-        
         x, y = self.pos
         upper_cell = (x, y - 1)
         lower_cell = (x, y + 1)
 
-        upper_tray = self.check_tray_type(upper_cell)
-        lower_tray = self.check_tray_type(lower_cell)
+        upper_tray = self.get_tray(upper_cell)
+        lower_tray = self.get_tray(lower_cell)
 
-        if upper_tray:
-            self.set_tray_interaction_target(upper_tray)
-            self.flag_until_tray = False
-        elif lower_tray:
-            self.set_tray_interaction_target(lower_tray)
-            self.flag_until_tray = False
+        tray = upper_tray or lower_tray
+        if tray:
+            if tray.food_count == 0:
+                print("REFILL REFILL REFILL, AGENTES TEM QUE ESPERAR")
+                return
+            else:
+                tray.food_count -= 1
+                # Bandeja disponível: interage normalmente
+                self.set_tray_interaction_target(tray.type)
+                self.flag_until_tray = False
         else:
             self.move_to_next_step()
 
@@ -140,8 +157,8 @@ class StudentAgent(Agent):
         left_cell = (x - 1, y)
         right_cell = (x + 1, y)
 
-        left_station = self.check_tray_type(left_cell, TRAY_TYPES={'Juice'})
-        right_station = self.check_tray_type(right_cell, TRAY_TYPES={'Juice'})
+        left_station = self.get_tray(left_cell, TRAY_TYPES={'Juice'})
+        right_station = self.get_tray(right_cell, TRAY_TYPES={'Juice'})
         
         is_lower_cell_final = lower_cell in [path[-1] for path in PATHS_TRAY_JUICE.values()]
         is_lower_cell_empty = len(self.model.grid.get_cell_list_contents([lower_cell])) == 0
@@ -208,21 +225,21 @@ class StudentAgent(Agent):
 
 
 
-    def check_tray_type(self, cell, TRAY_TYPES=TRAY_TYPES):
+    def get_tray(self, cell, TRAY_TYPES=TRAY_TYPES):
         tray = next((agent for agent in self.model.grid.get_cell_list_contents([cell]) if
                     isinstance(agent, StaticAgent) and agent.type in TRAY_TYPES), None)
-        return tray.type if tray else None
+        return tray
 
     def set_tray_interaction_target(self, tray_type):
         if self.diet == "vegan":
             if tray_type == 'Veg_Tray':
                 self.tray_interaction_target = 'Veg_Tray'
-                self.interaction_timer =  int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+                self.interaction_timer =  int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
         elif self.diet == "meat_eater":
             if tray_type == 'Meat_Tray':
                 self.tray_interaction_target = 'Meat_Tray'
-                self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
         else:
             self.tray_interaction_target = 'Sal_Tray'
@@ -230,18 +247,18 @@ class StudentAgent(Agent):
         if self.rice_type == "brown_rice":
             if tray_type == 'Brown_Rice_Tray':
                 self.tray_interaction_target = 'brown_rice'
-                self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
         elif self.rice_type == "rice":
             if tray_type == 'Rice_Tray':
                 self.tray_interaction_target = 'Rice_Tray'
-                self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
         else:
             self.tray_interaction_target = 'Beans_Tray'
 
         if tray_type != 'Meat_Tray' and tray_type != 'Veg_Tray' and tray_type != 'Rice_Tray' and tray_type != 'Brown_Rice_Tray':
             self.tray_interaction_target = tray_type
-            # print(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
-            self.interaction_timer = int(max(10, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+            # print(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+            self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             
                 
 
@@ -288,37 +305,16 @@ class StudentAgent(Agent):
         path_occupancy.sort(key=lambda item: item[1])
         best_path_key = path_occupancy[0][0]
 
-        print(path_occupancy)
 
         count_path = path_occupancy.count((best_path_key, path_occupancy[0][1]))
         if count_path > 1:
-            print("Warning: Multiple paths with the same occupancy found.")
             # If there are multiple paths with the same occupancy, choose one randomly
             best_path_key = random.choice([key for key, occupancy in path_occupancy if occupancy == path_occupancy[0][1]])
 
-        print(f"Agent {self.unique_id} escolheu path '{best_path_key}' com ocupação relativa {path_occupancy[0][1]:.2f}")
         return best_path_key
 
 
     def _choose_juice_path(self):
-
-        # if self.juice:
-        #     if self.catraca_id in [1, 2]:  # Lado esquerdo
-        #         path_keys = list(PATHS_TRAY_JUICE.keys())[0:6]
-        #     elif self.catraca_id in [3, 4]:  # Lado direito
-        #         path_keys = list(PATHS_CATRACAS2.keys())[6:12]
-        #     else:
-        #         print(f"Warning: Invalid catraca_id {self.catraca_id}.")
-        #         return None
-        # else:
-        #     if self.catraca_id in [1, 2]:  # Lado esquerdo
-        #         path_keys = list(PATHS_TRAY_NO_JUICE.keys())[0:6]
-        #     elif self.catraca_id in [3, 4]:  # Lado direito
-        #         path_keys = list(PATHS_TRAY_NO_JUICE.keys())[6:12]
-        #     else:
-        #         print(f"Warning: Invalid catraca_id {self.catraca_id}.")
-        #         return None
-
         return "J" + (str(self.current_path)) if self.juice else "NJ" + (str(self.current_path))
 
 
@@ -458,22 +454,28 @@ class StudentAgent(Agent):
 
             elif self.at_rampa_path:
                 path_coordinates = PATHS_CATRACAS2.get(self.current_path, [])
-                
+
             elif self.at_juice_path:
                 if self.juice:
                     path_coordinates = PATHS_TRAY_JUICE.get(self.current_path, [])
+
                 else:
                     path_coordinates = PATHS_TRAY_NO_JUICE.get(self.current_path, [])
-                    
+
             elif self.at_end_path:
                 if self.sobremesa and not self.condimentos:
                     path_coordinates = PATHS_END_DESSERT.get(self.current_path, [])
+
                 elif self.condimentos and not self.sobremesa:
                     path_coordinates = PATHS_END_COND.get(self.current_path, [])
+
                 elif self.sobremesa and self.condimentos:
                     path_coordinates = PATHS_END_CONDESERT.get(self.current_path, [])
+                    
                 else:
                     path_coordinates = PATHS_END_NOTHING.get(self.current_path, [])
+            else:
+                path_coordinates = []
 
             if not path_coordinates:
                 print(f"Warning: No coordinates found for path {self.current_path}")
@@ -496,7 +498,6 @@ class StudentAgent(Agent):
                 else:
                     self.blocked_steps += 1
             else:
-                print(f"Agent {self.unique_id} has reached the end of path {self.current_path}")
                 self.terminou_path_local = True
                 self.steps_visited = 0
                 self.blocked_steps = 0
@@ -561,7 +562,6 @@ class StudentAgent(Agent):
             self.current_path = self._choose_common_path()
             self.at_common_path = True
             self.steps_visited = 0
-            print(f"Agent {self.unique_id} chose common path {self.current_path} at position {self.pos}")
         else:
             if self.terminou_path:
                 if self.interaction_table_timer != -1:
