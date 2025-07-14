@@ -14,15 +14,15 @@ import numpy as np
 CATRACA_MAPPING = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
 
 TRAY_TYPES = {'Rice_tray', 'Brown_Rice_Tray', 'Beans_Tray',
-              'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray'}
+              'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray', 'Juice', 'Dessert', 'Spices'}
 
 DEFAULT_TRAY_PORTIONS = 100
 DEFAULT_TRAY_PORTIONS_STD = 15
-DEFAULT_TRAY_PORTIONS_REFILL = 120
+DEFAULT_TRAY_PORTIONS_REFILL = 60
 DEFAULT_TRAY_PORTIONS_REFILL_STD = 40
-TRAY_INTERACTION_TIME = 10
+TRAY_INTERACTION_TIME = 6
 TRAY_INTERACTION_TIME_STD = 2
-JUICE_INTERACTION_TIME = 6
+JUICE_INTERACTION_TIME = 8
 JUICE_INTERACTION_TIME_STD = 2
 
 
@@ -49,14 +49,15 @@ class StaticAgent(Agent):
     def step(self):
         if  not self.is_refilling and self.food_count <= 0:
             self.is_refilling = True
-            self.refill_timer = int(max(60, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
+            self.refill_timer = int(max(40, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
 
         elif self.refill_timer > 0 and self.is_refilling:
             self.refill_timer -= 1
-            if self.refill_timer == 0:
-                self.is_refilling = False
-                self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
-                print(f"Refilled {self.type} at position {self.x}, {self.y}")
+
+        elif self.refill_timer == 0 and self.is_refilling:
+            self.is_refilling = False
+            self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
+            print(f"Refilled {self.type} at position {self.x}, {self.y}")
 
         
 
@@ -70,6 +71,8 @@ class StudentAgent(Agent):
 
         self.waiting_time_until_tray = 0
         self.flag_until_tray = True
+
+        self.window_size_count_time = 60 # seconds
 
         self.blocked_steps = 0
         self.steps_visited = 0
@@ -148,7 +151,12 @@ class StudentAgent(Agent):
             # Bandeja disponível: interage normalmente
                 tray.food_count -= 1
                 self.set_tray_interaction_target(tray.type)
-                self.flag_until_tray = False
+                if self.flag_until_tray:
+                    self.flag_until_tray = False
+                    self.model.waiting_time_until_tray += self.waiting_time_until_tray
+                    self.model.num_students_1min_window += 1
+                    self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
+                    self.model.num_students_after_tray_total += 1
         else:
             self.move_to_next_step()
 
@@ -163,7 +171,11 @@ class StudentAgent(Agent):
         right_station = self.get_tray(right_cell, TRAY_TYPES={'Juice'})
         
         is_lower_cell_final = lower_cell in [path[-1] for path in PATHS_TRAY_JUICE.values()]
-        is_lower_cell_empty = len(self.model.grid.get_cell_list_contents([lower_cell])) == 0
+
+        if len(self.model.grid.get_cell_list_contents([lower_cell])) >= 1:
+            is_lower_cell_empty = False
+        else:
+            is_lower_cell_empty = True
 
         if self.interacted_w_juice:
             return
@@ -172,6 +184,7 @@ class StudentAgent(Agent):
             self.move_to_next_step()
             
         elif is_lower_cell_final:
+            print(f"Agent {self.unique_id} is at the final cell of the juice path: {lower_cell}")
             if (left_station or right_station):
                 if left_station:
                     self.tray_interaction_target = 'Juice'
@@ -189,13 +202,9 @@ class StudentAgent(Agent):
 
             
 
-        elif is_lower_cell_empty > 0:
+        elif  not is_lower_cell_empty:
             if (left_station or right_station):
-
-                current_juice_path = self.current_path
-                no_juice_path = 'N' + current_juice_path
-                nj_path_coords = PATHS_TRAY_NO_JUICE.get(no_juice_path, [])
-                # Procura o primeiro ponto livre no path de no juice a direita ou a esquerda
+                print(f"Agent {self.unique_id} is at a cell with juice stations: {lower_cell}")
 
                 if left_station:
                     self.tray_interaction_target = 'Juice'
@@ -204,21 +213,12 @@ class StudentAgent(Agent):
                     self.interacted_w_juice = True
 
                     # if self.model.is_cell_empty(right_cell):
-                    self.model.grid.move_agent(self, right_cell)
-                    self.pos = right_cell
-                    self.current_path = no_juice_path
-                    self.steps_visited = nj_path_coords.index(right_cell) + 1
 
                 elif right_station:
                     self.tray_interaction_target = 'Juice'
                     self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
                     #self.flag_until_tray = False
                     self.interacted_w_juice = True
-
-                    # if self.model.is_cell_empty(left_cell):
-                    self.pos = left_cell
-                    self.current_path = no_juice_path
-                    self.steps_visited = nj_path_coords.index(left_cell) + 1
 
                 return
             else:
@@ -559,6 +559,12 @@ class StudentAgent(Agent):
     #             print(f"Agent {self.unique_id} ENTRARA NA FUNÇÃO MOVE TO NEXT STEP")
     #             self.move_to_next_step()
     def step(self):
+        if not self.flag_until_tray and self.window_size_count_time > 0:
+            self.window_size_count_time -= 1
+            if self.window_size_count_time == 0:
+                self.model.num_students_1min_window -= 1
+                self.model.waiting_time_until_tray -= self.waiting_time_until_tray
+
         if not self.current_path:
             self.determine_catraca_id()
             self.current_path = self._choose_common_path()
@@ -575,7 +581,6 @@ class StudentAgent(Agent):
                 else:
                     table = self.find_nearest_free_table()
                     if table:
-                        self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
                         self.teleport_to_table(table)
 
             elif self.terminou_path_local:

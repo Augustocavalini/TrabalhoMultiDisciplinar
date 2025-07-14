@@ -16,29 +16,15 @@ class ModelText(TextElement):
         pass
 
     def render(self, model):
-
-        student_agents = [
-            agent for agent in model.schedule.agents if isinstance(agent, StudentAgent)]
-        avg_waiting_time = sum(agent.waiting_time for agent in student_agents) / \
-            len(student_agents) if student_agents else 0
         
         # waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in student_agents if agent.flag_until_tray == True) / \
         #     len(student_agents) if student_agents else 0
 
-        agents_until_tray = [agent for agent in student_agents if agent.flag_until_tray == True]
-        waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in agents_until_tray) / len(agents_until_tray) if agents_until_tray else 0
+        avg_waiting_time_until_tray = (model.waiting_time_until_tray / model.num_students_1min_window) if model.num_students_1min_window > 0 else 0
 
-        avg_waiting_time_total = model.waiting_time_until_tray_total / model.num_students_total if model.num_students_total > 0 else 0
-        
-        
+        avg_waiting_until_tray_time_total = (model.waiting_time_until_tray_total / model.num_students_after_tray_total) if model.num_students_after_tray_total > 0 else 0
 
-        # vect_tempo_esp_until_tray = []
-        # vect_time_esp_until_tray = []
-
-        # vect_time_esp_until_tray.append(model.time)
-        # vect_tempo_esp_until_tray.append(waiting_time_until_tray)
-
-        arquivo = "valores.xlsx"
+        arquivo ='valores.xlsx'
 
         if os.path.exists(arquivo):
             wb = load_workbook(arquivo)
@@ -47,37 +33,15 @@ class ModelText(TextElement):
             wb = Workbook()
             ws = wb.active
 
-        # Descobre a última linha usada da coluna A
         ultima_linha = ws.max_row
-
-        # Se a última célula está vazia, não conta como usada
         if ws.cell(row=ultima_linha, column=1).value is not None:
-            # Sempre cria um novo arquivo ao iniciar uma nova execução do main.py
-            # Usa um nome de arquivo único baseado em timestamp
-            if not hasattr(model, 'result_file'):
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                model.result_file = f"valores_{timestamp}.xlsx"
-            arquivo = model.result_file
+            nova_linha = ultima_linha + 1
+        else:
+            nova_linha = ultima_linha
 
-            if os.path.exists(arquivo):
-                wb = load_workbook(arquivo)
-                ws = wb.active
-            else:
-                wb = Workbook()
-                ws = wb.active
-
-            ultima_linha = ws.max_row
-
-            if ws.cell(row=ultima_linha, column=1).value is not None:
-                nova_linha = ultima_linha + 1
-            else:
-                nova_linha = ultima_linha
-
-            ws.cell(row=nova_linha, column=1, value=waiting_time_until_tray)
-            ws.cell(row=nova_linha, column=2, value=avg_waiting_time_total)
-
-            wb.save(arquivo)
-
+        ws.cell(row=nova_linha, column=1, value=avg_waiting_time_until_tray)
+        ws.cell(row=nova_linha, column=2, value=avg_waiting_until_tray_time_total)
+        wb.save(arquivo)
         # Real-time charting is not natively supported in Mesa's TextElement.
         # For now, we improve the text formatting and show times in minutes, aligned to the left.
 
@@ -85,9 +49,8 @@ class ModelText(TextElement):
             f"<div style='text-align:left; font-family:monospace;'>"
             f"<b>Hora Atual:</b> {model.get_human_readable_time()}<br>"
             f"<b>Estudantes no RU:</b> {model.num_students}<br>"
-            f"<b>Tempo médio de espera (qualquer coisa):</b> {avg_waiting_time/60.:.2f} min<br>"
-            f"<b>Tempo de fila antes da rampa:</b> {waiting_time_until_tray/60.:.2f} min<br>"
-            f"<b>Tempo médio de espera (total):</b> {avg_waiting_time_total/60.:.2f} min"
+            f"<b>Tempo de fila médio antes da rampa:</b> {avg_waiting_time_until_tray/60.:.2f} min<br>"
+            f"<b>Tempo médio de espera (total):</b> {avg_waiting_until_tray_time_total/60.:.2f} min"
             f"</div>"
         )
 class RestaurantModel(Model):
@@ -131,8 +94,11 @@ class RestaurantModel(Model):
         self.next_id = 0
         self.num_students = 0
 
-        self.num_students_total = 0 # calcula o número total de estudantes que entraram no modelo
+        self.num_students_after_tray_total = 0 # calcula o número total de estudantes que entraram no modelo
+
+        self.waiting_time_until_tray = 0 # calcula o tempo de espera até a bandeja, por todos os estudantes que passaram pelo modelo
         self.waiting_time_until_tray_total = 0 # calcula o tempo total de espera até a bandeja, por todos os estudantes que passsaram pelo modelo
+        self.num_students_1min_window = 0
 
         self.filtered_df = filtered_df
         self.locations_cache = {
@@ -235,7 +201,6 @@ class RestaurantModel(Model):
             self.linha_fora_RU_esq.append(student)
         
         self.num_students += 1
-        self.num_students_total += 1
 
         print(f"Trying to add a new student at {chosen_entry}")
 
