@@ -218,28 +218,22 @@ class RestaurantModel(Model):
                     student = line.pop(0)
                     student.pos = (pos_x, pos_y)
 
-                    print(f"Placing student {student.unique_id} at ({student.pos})")
                     self.grid.place_agent(student, (student.pos))
                     self.schedule.add(student)
-                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
 
                 elif self.grid.is_cell_empty((pos_x, 2)):
                     student = line.pop(0)
                     student.pos = (pos_x, 2)
 
-                    print(f"Placing student {student.unique_id} at ({student.pos})")
                     self.grid.place_agent(student, (student.pos))
                     self.schedule.add(student)
-                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
 
                 elif self.grid.is_cell_empty((pos_x, 4)):
                     student = line.pop(0)
                     student.pos = (pos_x, 4)
 
-                    print(f"Placing student {student.unique_id} at ({student.pos})")
                     self.grid.place_agent(student, (student.pos))
                     self.schedule.add(student)
-                    print(f"Student {student.unique_id} placed in the grid at ({student.pos})")
                     
                 else:
                     waiting_student = line[0]  # referência ao primeiro da fila sem remover
@@ -250,7 +244,7 @@ class RestaurantModel(Model):
                     student.waiting_time_until_tray += 1
 
             else:
-                print("No students in line to place.")
+                pass
     def get_free_tables(self, student_pos):
         tables = []
         for table in self.locations_cache['tables']:

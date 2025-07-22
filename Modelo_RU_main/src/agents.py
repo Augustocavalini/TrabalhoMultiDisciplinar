@@ -14,7 +14,7 @@ import numpy as np
 CATRACA_MAPPING = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
 
 TRAY_TYPES = {'Rice_tray', 'Brown_Rice_Tray', 'Beans_Tray',
-              'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray', 'Juice', 'Dessert', 'Spices'}
+              'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray', 'Juice', 'Dessert', 'Spices', 'Empty_Tray'}
 
 DEFAULT_TRAY_PORTIONS = 100
 DEFAULT_TRAY_PORTIONS_STD = 15
@@ -47,21 +47,24 @@ class StaticAgent(Agent):
             return None
 
     def step(self):
-        if  not self.is_refilling and self.food_count <= 0:
-            self.is_refilling = True
-            self.refill_timer = int(max(40, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
+        if not self.is_refilling:
+            if self.food_count > 0:
+                return
 
-        elif self.refill_timer > 0 and self.is_refilling:
-            self.refill_timer -= 1
+            elif  self.food_count <= 0:
+                self.is_refilling = True
+                self.refill_timer = int(max(30, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
 
-        elif self.refill_timer == 0 and self.is_refilling:
-            self.is_refilling = False
-            self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
-            print(f"Refilled {self.type} at position {self.x}, {self.y}")
+        else:
+            if self.refill_timer > 0:
+                self.refill_timer -= 1
+
+            elif self.refill_timer == 0:
+                self.is_refilling = False
+                self.food_count = max(85, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
+                print(f"Refilled {self.type} at position {self.x}, {self.y}")
 
         
-
-
 class StudentAgent(Agent):
     def __init__(self, unique_id, model, x, y):
         super().__init__(unique_id, model)
@@ -631,6 +634,10 @@ class StudentAgent(Agent):
                 # elif self.at_end_path:
                 #     self.check_end_interaction()
                 self.move_to_next_step()
+
+            elif self.interaction_timer < 0:
+                if self.at_rampa_path:
+                    self.check_tray_interaction()
 
 
 
