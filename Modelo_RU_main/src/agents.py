@@ -24,6 +24,10 @@ TRAY_INTERACTION_TIME = 6
 TRAY_INTERACTION_TIME_STD = 2
 JUICE_INTERACTION_TIME = 8
 JUICE_INTERACTION_TIME_STD = 2
+SPICES_INTERACTION_TIME = 6.7778
+SPICES_INTERACTION_TIME_STD = 2.3333
+DESSERT_INTERACTION_TIME = 3
+DESSERT_INTERACTION_TIME_STD = 3
 
 
 class StaticAgent(Agent):
@@ -227,6 +231,30 @@ class StudentAgent(Agent):
             else:
                 self.move_to_next_step()
                 
+    def check_end_interaction(self):
+
+        if self.sobremesa and not self.condimentos:
+            return
+
+        x, y = self.pos
+
+        lower_cell = (x, y + 1)
+        left_cell = (x - 1, y)
+        right_cell = (x + 1, y)
+
+        left_station = self.get_tray(left_cell, TRAY_TYPES={'Spices'})
+        right_station = self.get_tray(right_cell, TRAY_TYPES={'Spices'})
+        bottom_station = self.get_tray(lower_cell, TRAY_TYPES={'Dessert'})
+
+        if left_station or right_station:
+            self.tray_interaction_target = 'Spices'
+            self.interaction_timer = int(max(2, np.random.normal(SPICES_INTERACTION_TIME, SPICES_INTERACTION_TIME_STD)))
+
+        elif bottom_station:
+            self.tray_interaction_target = 'Dessert'
+            self.interaction_timer = int(max(2, np.random.normal(DESSERT_INTERACTION_TIME, DESSERT_INTERACTION_TIME_STD)))
+        else:
+            self.move_to_next_step()
 
 
 
@@ -631,8 +659,8 @@ class StudentAgent(Agent):
                     self.check_tray_interaction()
                 elif self.at_juice_path:
                     self.check_juice_interaction()
-                # elif self.at_end_path:
-                #     self.check_end_interaction()
+                elif self.at_end_path:
+                    self.check_end_interaction()
                 self.move_to_next_step()
 
             elif self.interaction_timer < 0:
