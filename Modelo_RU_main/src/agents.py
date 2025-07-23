@@ -24,10 +24,10 @@ TRAY_INTERACTION_TIME = 6
 TRAY_INTERACTION_TIME_STD = 2
 JUICE_INTERACTION_TIME = 8
 JUICE_INTERACTION_TIME_STD = 2
-SPICES_INTERACTION_TIME = 6.7778
-SPICES_INTERACTION_TIME_STD = 2.3333
-DESSERT_INTERACTION_TIME = 3
-DESSERT_INTERACTION_TIME_STD = 3
+SPICES_INTERACTION_TIME = 4
+SPICES_INTERACTION_TIME_STD = 2
+DESSERT_INTERACTION_TIME = 2
+DESSERT_INTERACTION_TIME_STD = 1
 
 
 class StaticAgent(Agent):
@@ -252,7 +252,7 @@ class StudentAgent(Agent):
 
         elif bottom_station:
             self.tray_interaction_target = 'Dessert'
-            self.interaction_timer = int(max(2, np.random.normal(DESSERT_INTERACTION_TIME, DESSERT_INTERACTION_TIME_STD)))
+            self.interaction_timer = int(max(1, np.random.normal(DESSERT_INTERACTION_TIME, DESSERT_INTERACTION_TIME_STD)))
         else:
             self.move_to_next_step()
 
