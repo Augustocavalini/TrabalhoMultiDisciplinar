@@ -36,13 +36,13 @@ if __name__ == "__main__":
     filtered_df = filtered_df.sort_values(by='seconds_from_start')
 
     grid = CanvasGrid(agent_portrayal, len(external_grid[0]), len(external_grid),600,600)
-    # model_cls = RestaurantModel
-    # server = ModularServer(model_cls, [grid, model_text], "University Restaurant Model", 
-    #                    {"external_grid": external_grid, "day": desired_day, "meal": desired_meal, "hour": desired_hour, "filtered_df": filtered_df})
+    model_cls = RestaurantModel
+    server = ModularServer(model_cls, [grid, model_text], "University Restaurant Model", 
+                       {"external_grid": external_grid, "day": desired_day, "meal": desired_meal, "hour": desired_hour, "filtered_df": filtered_df})
 
-    # server.launch()
-    modelo = RestaurantModel(external_grid=external_grid, day=desired_day, meal=desired_meal, hour=desired_hour, filtered_df=filtered_df)
+    server.launch()
+    # modelo = RestaurantModel(external_grid=external_grid, day=desired_day, meal=desired_meal, hour=desired_hour, filtered_df=filtered_df)
 
-    # Executa 100 passos da simulação
-    for i in range(100):
-        modelo.step()
+    # # Executa 100 passos da simulação
+    # for i in range(100):
+    #     modelo.step()
