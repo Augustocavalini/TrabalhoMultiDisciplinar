@@ -1,4 +1,3 @@
-
 from mesa import Agent
 import random
 from mapa.paths import PATHS_CATRACAS2, PATHS_END_CONDESERT, PATHS_END_DESSERT, PATHS_TRAY_JUICE, PATHS_TRAY_NO_JUICE, PATHS_END_NOTHING, PATHS_END_COND, COMMON_PATH_CATRACA
@@ -16,10 +15,10 @@ CATRACA_MAPPING = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
 TRAY_TYPES = {'Rice_tray', 'Brown_Rice_Tray', 'Beans_Tray',
               'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray', 'Juice', 'Dessert', 'Spices', 'Empty_Tray'}
 
-DEFAULT_TRAY_PORTIONS = 10
+DEFAULT_TRAY_PORTIONS = 5
 DEFAULT_TRAY_PORTIONS_STD = 2
-DEFAULT_TRAY_PORTIONS_REFILL = 20
-DEFAULT_TRAY_PORTIONS_REFILL_STD = 4
+DEFAULT_TRAY_PORTIONS_REFILL = 40
+DEFAULT_TRAY_PORTIONS_REFILL_STD = 10
 TRAY_INTERACTION_TIME = 6
 TRAY_INTERACTION_TIME_STD = 2
 JUICE_INTERACTION_TIME = 8
@@ -36,7 +35,7 @@ class StaticAgent(Agent):
         self.x = pos_x
         self.y = pos_y
         self.type = agent_type
-        self.food_count = max(10, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
+        self.food_count = int(max(10, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD)))
         self.content = self._determine_tray_type()
         self.refill_timer = 0
         self.is_refilling = False
@@ -63,9 +62,11 @@ class StaticAgent(Agent):
             if self.refill_timer > 0:
                 self.refill_timer -= 1
 
+                print(f"Refilling {self.type} at position {self.x}, {self.y}. Time left: {self.refill_timer} seconds")
+
             elif self.refill_timer == 0:
                 self.is_refilling = False
-                self.food_count = max(10, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD))
+                self.food_count = int(max(10, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD)))
                 print(f"Refilled {self.type} at position {self.x}, {self.y}")
 
         
@@ -84,14 +85,14 @@ class StudentAgent(Agent):
         self.blocked_steps = 0
         self.steps_visited = 0
         self.visited_groups = set()
-        self.current_goal = None
+        # self.current_goal = None
         self.current_path = None
         self.interaction_timer = 0
         self.ta_na_mesa = False
         self.interaction_table_timer = -1
         self.tray_interaction_target = None
         self.move_attempts = []
-        self.path_occupancy = {}
+        # self.path_occupancy = {}
         self._initialize_preferences()
         # self.determine_catraca_id()
         self.catraca_id = None
@@ -141,7 +142,6 @@ class StudentAgent(Agent):
         
     # VISTA
     def check_tray_interaction(self):
-        
         x, y = self.pos
         upper_cell = (x, y - 1)
         lower_cell = (x, y + 1)
@@ -150,24 +150,26 @@ class StudentAgent(Agent):
         lower_tray = self.get_tray(lower_cell)
 
         tray = upper_tray or lower_tray
-        if tray:
-            if tray.is_refilling:
-                print("REFILL REFILL REFILL, AGENTES TEM QUE ESPERAR")
-                self.interaction_timer = -100  # Indica que o agente está esperando por um refill
-                return
-            else:
-            # Bandeja disponível: interage normalmente
-                tray.food_count -= 1
-                self.set_tray_interaction_target(tray.type)
-                if self.flag_until_tray:
-                    self.flag_until_tray = False
-                    self.model.waiting_time_until_tray += self.waiting_time_until_tray
-                    self.model.num_students_1min_window += 1
-                    self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
-                    self.model.num_students_after_tray_total += 1
-        else:
-            # self.move_to_next_step()
+        if not tray:
             return
+
+        # Se não há comida ou está em refill, espera até completar
+        if tray.food_count <= 0 or tray.is_refilling:
+            # debug
+            print(f"Student {self.unique_id} waiting: food={tray.food_count},  refilling={tray.is_refilling}, at {self.pos}")
+            self.interaction_timer = -100
+            return
+
+        # Há comida disponível: consome e inicia interação
+        tray.food_count -= 1
+        # nunca deixa ficar negativo
+        self.set_tray_interaction_target(tray.type)
+        if self.flag_until_tray:
+            self.flag_until_tray = False
+            self.model.waiting_time_until_tray += self.waiting_time_until_tray
+            self.model.num_students_1min_window += 1
+            self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
+            self.model.num_students_after_tray_total += 1
 
     def check_juice_interaction(self):
         x, y = self.pos
