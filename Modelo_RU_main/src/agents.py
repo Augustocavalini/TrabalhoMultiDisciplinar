@@ -129,22 +129,34 @@ class StudentAgent(Agent):
         probabilidades = [0.8625, 0.13, 0.0075]
         return random.choices(opcoes, weights=probabilidades, k=1)[0]
 
+        
+    def pega_feijao(self):
+        opcoes = [1, 0]
+        probabilidades = [0.8953, 0.1047]
+        return random.choices(opcoes, weights=probabilidades, k=1)[0]
+
+
     def escolher_dieta(self):
         opcoes = ["vegan", "meat_eater", "no_meat_or_veg"]
         probabilidades = [0.05, 0.95, 0]
         return random.choices(opcoes, weights=probabilidades, k=1)[0]
     
-    def escolher_suco(self):
+    def pega_salada(self):
+        opcoes = [1, 0]
+        probabilidades = [0.6428, 0.3572]
+        return random.choices(opcoes, weights=probabilidades, k=1)[0]
+    
+    def pega_suco(self):
         opcoes = [1, 0]
         probabilidades = [0.5012468828, 0.4987531172]
         return random.choices(opcoes, weights=probabilidades, k=1)[0]
     
-    def escolher_sobremesa(self):
+    def pega_sobremesa(self):
         opcoes = [1, 0]
         probabilidades = [0.8447630923, (1-0.8447630923)]
         return random.choices(opcoes, weights=probabilidades, k=1)[0]
     
-    def escolher_condimentos(self):
+    def pega_condimentos(self):
         opcoes = [1, 0]
         probabilidades = [0.6789276808, (0.3210723192)]
         return random.choices(opcoes, weights=probabilidades, k=1)[0]
@@ -152,9 +164,11 @@ class StudentAgent(Agent):
     def _initialize_preferences(self):
         self.diet = self.escolher_dieta()
         self.rice_type = self.escolher_arroz()
-        self.juice = self.escolher_suco()
-        self.sobremesa = self.escolher_sobremesa()
-        self.condimentos = self.escolher_condimentos()
+        self.beans = self.pega_feijao()
+        self.salad = self.pega_salada()
+        self.juice = self.pega_suco()
+        self.sobremesa = self.pega_sobremesa()
+        self.condimentos = self.pega_condimentos()
 
         
     # VISTA
@@ -288,36 +302,86 @@ class StudentAgent(Agent):
                     isinstance(agent, StaticAgent) and agent.type in TRAY_TYPES), None)
         return tray
 
-    def set_tray_interaction_target(self, tray_type):
-        if self.diet == "vegan":
-            if tray_type == 'Veg_Tray':
-                self.tray_interaction_target = 'Veg_Tray'
-                self.interaction_timer =  int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+    # def set_tray_interaction_target(self, tray_type):
+    #     if self.rice_type == "brown_rice":
+    #         if tray_type == 'Brown_Rice_Tray':
+    #             self.tray_interaction_target = 'brown_rice'
+    #             self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
-        elif self.diet == "meat_eater":
-            if tray_type == 'Meat_Tray':
-                self.tray_interaction_target = 'Meat_Tray'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+    #     elif self.rice_type == "rice":
+    #         if tray_type == 'Rice_Tray':
+    #             self.tray_interaction_target = 'Rice_Tray'
+    #             self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+        
+    #     elif self.rice_type == "no_rice":
+    #         pass
 
-        else:
-            self.tray_interaction_target = 'Sal_Tray'
+    #     if self.beans:
+    #         if tray_type == 'Beans_Tray':
+    #             self.tray_interaction_target = 'Beans_Tray'
+    #             self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
-        if self.rice_type == "brown_rice":
-            if tray_type == 'Brown_Rice_Tray':
-                self.tray_interaction_target = 'brown_rice'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
-        elif self.rice_type == "rice":
-            if tray_type == 'Rice_Tray':
-                self.tray_interaction_target = 'Rice_Tray'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
-        else:
-            self.tray_interaction_target = 'Beans_Tray'
+    #     if tray_type == 'Guarn_Tray':
+    #         self.tray_interaction_target = 'Guarn_Tray'
+    #         self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+        
+    #     if self.diet == "vegan":
+    #         if tray_type == 'Veg_Tray':
+    #             self.tray_interaction_target = 'Veg_Tray'
+    #             self.interaction_timer =  int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
 
-        if tray_type != 'Meat_Tray' and tray_type != 'Veg_Tray' and tray_type != 'Rice_Tray' and tray_type != 'Brown_Rice_Tray':
-            self.tray_interaction_target = tray_type
-            # print(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
-            self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+    #     elif self.diet == "meat_eater":
+    #         if tray_type == 'Meat_Tray':
+    #             self.tray_interaction_target = 'Meat_Tray'
+    #             self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+
+
+
+    #     if tray_type != 'Meat_Tray' and tray_type != 'Veg_Tray' and tray_type != 'Rice_Tray' and tray_type != 'Brown_Rice_Tray':
+    #         self.tray_interaction_target = tray_type
+    #         # print(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
+    #         self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME,TRAY_INTERACTION_TIME_STD)))
             
+
+    def set_tray_interaction_target(self, tray_type):
+        if tray_type == 'Brown_Rice_Tray':
+            if self.rice_type == "brown_rice":
+                self.tray_interaction_target = 'brown_rice'
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+
+        elif tray_type == 'Rice_Tray':
+            if self.rice_type == "rice":
+                self.tray_interaction_target = 'Rice_Tray'
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+
+        elif tray_type == 'Beans_Tray':
+            if self.beans:
+                self.tray_interaction_target = 'Beans_Tray'
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+
+        elif tray_type == 'Guarn_Tray':
+            self.tray_interaction_target = 'Guarn_Tray'
+            self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+
+        elif tray_type == 'Veg_Tray':
+            if self.diet == "vegan":
+                self.tray_interaction_target = 'Veg_Tray'
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+
+        elif tray_type == 'Meat_Tray':
+            if self.diet == "meat_eater":
+                self.tray_interaction_target = 'Meat_Tray'
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+
+        elif tray_type == 'Sal_Tray':
+            if self.salad:
+                self.tray_interaction_target = 'Sal_Tray'
+                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+
+        elif tray_type == 'Talher_Tray':
+            self.tray_interaction_target = tray_type
+            self.interaction_timer = int(2)
+
                 
 
     def _choose_common_path(self):

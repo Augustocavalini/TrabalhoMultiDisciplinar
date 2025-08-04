@@ -62,8 +62,8 @@ class RestaurantModel(Model):
         CellType.SPICES: 'Spices',
         CellType.DESSERT: 'Dessert',
         CellType.TABLE: 'Table',
-        CellType.EMPTY_TRAY: 'Empty_tray',
-        CellType.RICE_TRAY: 'Rice_tray',
+        CellType.EMPTY_TRAY: 'Empty_Tray',
+        CellType.RICE_TRAY: 'Rice_Tray',
         CellType.BROWN_RICE_TRAY: 'Brown_Rice_Tray',
         CellType.BEANS_TRAY: 'Beans_Tray',
         CellType.GUARN_TRAY: 'Guarn_Tray',
@@ -276,7 +276,7 @@ class RestaurantModel(Model):
 def agent_portrayal(agent):
     """Defines the visual portrayal of agents in the simulation."""
     if isinstance(agent, StudentAgent):
-        if agent.waiting_time > WAITING_TIME_THRESHOLD:
+        if agent.waiting_time == -100:
             color = "orange"
         elif agent.model.error_message:
             color = "red"
@@ -294,44 +294,57 @@ def agent_portrayal(agent):
             "Layer": 0,
             "r": 0.5
         }
+    
     else:
-        tray_colors = {
-            "Rice": "pink",
-            "Brown": "brown",
-            "Beans": "black",
-            "Guarn": "blue",
-            "Veg": "purple",
-            "Meat": "red",
-            "Sal": "yellow",
-            "Talher": "orange",
-            "EMPTY": "green"
-        }
-        shape_colors = {
-            "Turnstile": "gray",
-            "Wall": "black",
-            "Exit": "red",
-            "Juice": "blue",
-            "Spices": "purple",
-            "Dessert": "gold",
-            "Table": "#766c6a",
-            "EMPTY_TRAY": tray_colors["EMPTY"]
-        }
+        if agent.is_refilling:
+            color = "black"
 
-        if "Tray" in agent.type and agent.content:
             return {
                 "Shape": "rect",
-                "Color": tray_colors.get(agent.content, "green"),
+                "Color": color,
                 "Filled": "true",
                 "Layer": 1,
                 "w": 1,
                 "h": 1
             }
         else:
-            return {
-                "Shape": "rect",
-                "Color": shape_colors.get(agent.type, "green"),
-                "Filled": "true",
-                "Layer": 1,
-                "w": 1,
-                "h": 1
+            tray_colors = {
+                "Rice": "pink",
+                "Brown": "brown",
+                "Beans": "black",
+                "Guarn": "blue",
+                "Veg": "purple",
+                "Meat": "red",
+                "Sal": "yellow",
+                "Talher": "orange",
+                "EMPTY": "green"
             }
+            shape_colors = {
+                "Turnstile": "gray",
+                "Wall": "black",
+                "Exit": "red",
+                "Juice": "blue",
+                "Spices": "purple",
+                "Dessert": "gold",
+                "Table": "#766c6a",
+                "EMPTY_TRAY": tray_colors["EMPTY"]
+            }
+
+            if "Tray" in agent.type and agent.content:
+                return {
+                    "Shape": "rect",
+                    "Color": tray_colors.get(agent.content, "green"),
+                    "Filled": "true",
+                    "Layer": 1,
+                    "w": 1,
+                    "h": 1
+                }
+            else:
+                return {
+                    "Shape": "rect",
+                    "Color": shape_colors.get(agent.type, "green"),
+                    "Filled": "true",
+                    "Layer": 1,
+                    "w": 1,
+                    "h": 1
+                }
