@@ -12,21 +12,34 @@ import numpy as np
 
 CATRACA_MAPPING = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
 
-TRAY_TYPES = {'Rice_tray', 'Brown_Rice_Tray', 'Beans_Tray',
+TRAY_TYPES = {'Rice_Tray', 'Brown_Rice_Tray', 'Beans_Tray',
               'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray', 'Juice', 'Dessert', 'Spices', 'Empty_Tray'}
 
 DEFAULT_TRAY_PORTIONS = 5
 DEFAULT_TRAY_PORTIONS_STD = 2
-DEFAULT_TRAY_PORTIONS_REFILL = 40
+DEFAULT_TRAY_PORTIONS_REFILL = 10
 DEFAULT_TRAY_PORTIONS_REFILL_STD = 10
-TRAY_INTERACTION_TIME = 6
-TRAY_INTERACTION_TIME_STD = 2
-JUICE_INTERACTION_TIME = 8
-JUICE_INTERACTION_TIME_STD = 2
-SPICES_INTERACTION_TIME = 4
-SPICES_INTERACTION_TIME_STD = 2
-DESSERT_INTERACTION_TIME = 2
-DESSERT_INTERACTION_TIME_STD = 1
+
+
+
+# TRAY INTERACTION PARAMETERS
+# MEAN INTERACTION TIME // STANDARD DEVIATION // MINIMUM TIMER
+
+# Mapear tipos de bandeja para parâmetros de distribuição (média, desvio, mínimo)
+
+TRAY_INTERACTION_PARAMS = {
+    'brown_rice': (6, 2, 4),
+    'Rice_Tray': (6, 2, 4),
+    'Beans_Tray': (6, 2, 4),
+    'Guarn_Tray': (6, 2, 4),
+    'Veg_Tray': (6, 2, 4),
+    'Meat_Tray': (6, 2, 4),
+    'Sal_Tray': (6, 2, 4),
+    'Talher_Tray': (2, 1, 2),
+    'Juice': (10, 4, 4),
+    'Spices': (4, 2, 2),
+    'Dessert': (1, 2, 1),
+}
 
 
 class StaticAgent(Agent):
@@ -35,7 +48,7 @@ class StaticAgent(Agent):
         self.x = pos_x
         self.y = pos_y
         self.type = agent_type
-        self.food_count = int(max(10, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD)))
+        self.food_count = int(max(5, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD)))
         self.content = self._determine_tray_type()
         self.refill_timer = 0
         self.is_refilling = False
@@ -56,6 +69,7 @@ class StaticAgent(Agent):
 
             elif  self.food_count <= 0:
                 self.is_refilling = True
+                self.food_count = 0
                 self.refill_timer = int(max(2, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
 
         else:
@@ -167,23 +181,24 @@ class StudentAgent(Agent):
         if not tray:
             return
 
-        # Se não há comida ou está em refill, espera até completar
-        if tray.food_count <= 0 or tray.is_refilling:
-            # debug
-            print(f"Student {self.unique_id} waiting: food={tray.food_count},  refilling={tray.is_refilling}, at {self.pos}")
-            self.interaction_timer = -100
-            return
+        if self.set_tray_interaction_target(tray.type):
+            # Se não há comida ou está em refill, espera até completar
+            if tray.is_refilling:
+                # debug
+                print(f"Student {self.unique_id} waiting: food={tray.food_count},  refilling={tray.is_refilling}, at {self.pos}")
+                self.interaction_timer = -100
+                return
 
-        # Há comida disponível: consome e inicia interação
-        tray.food_count -= 1
-        # nunca deixa ficar negativo
-        self.set_tray_interaction_target(tray.type)
-        if self.flag_until_tray:
-            self.flag_until_tray = False
-            self.model.waiting_time_until_tray += self.waiting_time_until_tray
-            self.model.num_students_1min_window += 1
-            self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
-            self.model.num_students_after_tray_total += 1
+            # Há comida disponível: consome e inicia interação
+            self.interaction_timer = self.get_tray_interaction_times()
+            tray.food_count -= 1
+            
+            if self.flag_until_tray:
+                self.flag_until_tray = False
+                self.model.waiting_time_until_tray += self.waiting_time_until_tray
+                self.model.num_students_1min_window += 1
+                self.model.waiting_time_until_tray_total += self.waiting_time_until_tray
+                self.model.num_students_after_tray_total += 1
 
     def check_juice_interaction(self):
         x, y = self.pos
@@ -214,13 +229,13 @@ class StudentAgent(Agent):
             if (left_station or right_station):
                 if left_station:
                     self.tray_interaction_target = 'Juice'
-                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    self.interaction_timer = self.get_tray_interaction_times()
                     # self.juice = 0
                     self.interacted_w_juice = True
 
                 elif right_station:
                     self.tray_interaction_target = 'Juice'
-                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    self.interaction_timer = self.get_tray_interaction_times()
                     #self.flag_until_tray = False
                     self.interacted_w_juice = True
             else:
@@ -235,7 +250,7 @@ class StudentAgent(Agent):
 
                 if left_station:
                     self.tray_interaction_target = 'Juice'
-                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    self.interaction_timer = self.get_tray_interaction_times()
                     #self.flag_until_tray = False
                     self.interacted_w_juice = True
 
@@ -243,7 +258,7 @@ class StudentAgent(Agent):
 
                 elif right_station:
                     self.tray_interaction_target = 'Juice'
-                    self.interaction_timer = int(max(3, np.random.normal(JUICE_INTERACTION_TIME, JUICE_INTERACTION_TIME_STD)))
+                    self.interaction_timer = self.get_tray_interaction_times()
                     #self.flag_until_tray = False
                     self.interacted_w_juice = True
 
@@ -269,11 +284,11 @@ class StudentAgent(Agent):
 
         if left_station or right_station:
             self.tray_interaction_target = 'Spices'
-            self.interaction_timer = int(max(2, np.random.normal(SPICES_INTERACTION_TIME, SPICES_INTERACTION_TIME_STD)))
+            self.interaction_timer = self.get_tray_interaction_times()
 
         elif bottom_station:
             self.tray_interaction_target = 'Dessert'
-            self.interaction_timer = int(max(1, np.random.normal(DESSERT_INTERACTION_TIME, DESSERT_INTERACTION_TIME_STD)))
+            self.interaction_timer = self.get_tray_interaction_times()
         else:
             # self.move_to_next_step()
             return
@@ -327,45 +342,52 @@ class StudentAgent(Agent):
             
 
     def set_tray_interaction_target(self, tray_type):
+
         if tray_type == 'Brown_Rice_Tray':
             if self.rice_type == "brown_rice":
                 self.tray_interaction_target = 'brown_rice'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
-
+                return True
+                
         elif tray_type == 'Rice_Tray':
             if self.rice_type == "rice":
                 self.tray_interaction_target = 'Rice_Tray'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+                return True
 
         elif tray_type == 'Beans_Tray':
             if self.beans:
                 self.tray_interaction_target = 'Beans_Tray'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+                return True
 
         elif tray_type == 'Guarn_Tray':
             self.tray_interaction_target = 'Guarn_Tray'
-            self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+            return True
 
         elif tray_type == 'Veg_Tray':
             if self.diet == "vegan":
                 self.tray_interaction_target = 'Veg_Tray'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+                return True
 
         elif tray_type == 'Meat_Tray':
             if self.diet == "meat_eater":
                 self.tray_interaction_target = 'Meat_Tray'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+                return True
 
         elif tray_type == 'Sal_Tray':
             if self.salad:
                 self.tray_interaction_target = 'Sal_Tray'
-                self.interaction_timer = int(max(6, np.random.normal(TRAY_INTERACTION_TIME, TRAY_INTERACTION_TIME_STD)))
+                return True
 
         elif tray_type == 'Talher_Tray':
-            self.tray_interaction_target = tray_type
-            self.interaction_timer = int(2)
+            self.tray_interaction_target = "Talher_Tray"
+            return True
+        
+        return False
 
-                
+    def get_tray_interaction_times(self):
+        if self.tray_interaction_target in TRAY_INTERACTION_PARAMS:
+            mean, std, min_val = TRAY_INTERACTION_PARAMS[self.tray_interaction_target]
+            return int(max(min_val, np.random.normal(mean, std)))
+        return None
 
     def _choose_common_path(self):
         current_path_chosen = COMMON_PATH_CATRACA.get(self.catraca_id, None)
@@ -730,8 +752,9 @@ class StudentAgent(Agent):
                     self.check_juice_interaction()
                 elif self.at_end_path and self.blocked_steps == 0:
                     self.check_end_interaction()
-                    
+
                 if self.interaction_timer == 0:
+                    self.tray_interaction_target = None
                     self.move_to_next_step()
                     
             elif self.interaction_timer > 0: # quando eu fui setado para interagir com algum recurso. quando entrei em algum check_interaction
@@ -739,6 +762,7 @@ class StudentAgent(Agent):
                 self.waiting_time += 1
                 
                 if self.interaction_timer == 0:
+                    self.tray_interaction_target = None
                     self.move_to_next_step()
 
             elif self.interaction_timer == -100: # vai entrar nesse quando eu estou esperando por algum recurso

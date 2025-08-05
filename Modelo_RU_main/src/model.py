@@ -20,38 +20,38 @@ class ModelText(TextElement):
         # waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in student_agents if agent.flag_until_tray == True) / \
         #     len(student_agents) if student_agents else 0
 
-        avg_waiting_time_until_tray = (model.waiting_time_until_tray / model.num_students_1min_window) if model.num_students_1min_window > 0 else 0
+        # avg_waiting_time_until_tray = (model.waiting_time_until_tray / model.num_students_1min_window) if model.num_students_1min_window > 0 else 0
 
-        avg_waiting_until_tray_time_total = (model.waiting_time_until_tray_total / model.num_students_after_tray_total) if model.num_students_after_tray_total > 0 else 0
+        # avg_waiting_until_tray_time_total = (model.waiting_time_until_tray_total / model.num_students_after_tray_total) if model.num_students_after_tray_total > 0 else 0
 
-        arquivo ='valores.xlsx'
+        # arquivo ='valores.xlsx'
 
-        if os.path.exists(arquivo):
-            wb = load_workbook(arquivo)
-            ws = wb.active
-        else:
-            wb = Workbook()
-            ws = wb.active
+        # if os.path.exists(arquivo):
+        #     wb = load_workbook(arquivo)
+        #     ws = wb.active
+        # else:
+        #     wb = Workbook()
+        #     ws = wb.active
 
-        ultima_linha = ws.max_row
-        if ws.cell(row=ultima_linha, column=1).value is not None:
-            nova_linha = ultima_linha + 1
-        else:
-            nova_linha = ultima_linha
+        # ultima_linha = ws.max_row
+        # if ws.cell(row=ultima_linha, column=1).value is not None:
+        #     nova_linha = ultima_linha + 1
+        # else:
+        #     nova_linha = ultima_linha
 
-        ws.cell(row=nova_linha, column=1, value=avg_waiting_time_until_tray)
-        ws.cell(row=nova_linha, column=2, value=avg_waiting_until_tray_time_total)
-        wb.save(arquivo)
+        # ws.cell(row=nova_linha, column=1, value=avg_waiting_time_until_tray)
+        # ws.cell(row=nova_linha, column=2, value=avg_waiting_until_tray_time_total)
+        # wb.save(arquivo)
         # Real-time charting is not natively supported in Mesa's TextElement.
         # For now, we improve the text formatting and show times in minutes, aligned to the left.
 
         return (
-            f"<div style='text-align:left; font-family:monospace;'>"
-            f"<b>Hora Atual:</b> {model.get_human_readable_time()}<br>"
-            f"<b>Estudantes no RU:</b> {model.num_students}<br>"
-            f"<b>Tempo de fila médio antes da rampa:</b> {avg_waiting_time_until_tray/60.:.2f} min<br>"
-            f"<b>Tempo médio de espera (total):</b> {avg_waiting_until_tray_time_total/60.:.2f} min"
-            f"</div>"
+            # f"<div style='text-align:left; font-family:monospace;'>"
+            # f"<b>Hora Atual:</b> {model.get_human_readable_time()}<br>"
+            # f"<b>Estudantes no RU:</b> {model.num_students}<br>"
+            # f"<b>Tempo de fila médio antes da rampa:</b> {avg_waiting_time_until_tray/60.:.2f} min<br>"
+            # f"<b>Tempo médio de espera (total):</b> {avg_waiting_until_tray_time_total/60.:.2f} min"
+            # f"</div>"
         )
 class RestaurantModel(Model):
     AGENT_TYPE_MAPPING = {
@@ -276,8 +276,8 @@ class RestaurantModel(Model):
 def agent_portrayal(agent):
     """Defines the visual portrayal of agents in the simulation."""
     if isinstance(agent, StudentAgent):
-        if agent.waiting_time == -100:
-            color = "orange"
+        if agent.interaction_timer == -100:
+            color = "red"
         elif agent.model.error_message:
             color = "red"
         else:
