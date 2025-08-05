@@ -30,6 +30,7 @@ if __name__ == "__main__":
 
     filtered_df = DATAFRAME[
         (DATAFRAME['Entrada'].dt.date == datetime.strptime(desired_day, '%Y-%m-%d').date()) & 
+        (DATAFRAME['Entrada'].dt.strftime('%H:%M') >= desired_hour) &
         (DATAFRAME['Refeicao'] == desired_meal)
     ].copy()
     filtered_df['seconds_from_start'] = filtered_df['Entrada'].dt.hour * 3600 + filtered_df['Entrada'].dt.minute * 60 + filtered_df['Entrada'].dt.second
@@ -44,5 +45,5 @@ if __name__ == "__main__":
     # modelo = RestaurantModel(external_grid=external_grid, day=desired_day, meal=desired_meal, hour=desired_hour, filtered_df=filtered_df)
 
     # # Executa 100 passos da simulação
-    # for i in range(100):
+    # for i in range(1800):
     #     modelo.step()

@@ -13,45 +13,49 @@ import datetime
 
 class ModelText(TextElement):
     def __init__(self):
-        pass
+        self.avg_waiting_time_until_tray = 0
+        self.avg_waiting_until_tray_time_total = 0
 
     def render(self, model):
         
         # waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in student_agents if agent.flag_until_tray == True) / \
         #     len(student_agents) if student_agents else 0
 
-        # avg_waiting_time_until_tray = (model.waiting_time_until_tray / model.num_students_1min_window) if model.num_students_1min_window > 0 else 0
+        
 
-        # avg_waiting_until_tray_time_total = (model.waiting_time_until_tray_total / model.num_students_after_tray_total) if model.num_students_after_tray_total > 0 else 0
+        if (model._steps % 30) == 0: 
+            self.avg_waiting_time_until_tray = (model.waiting_time_until_tray / model.num_students_1min_window) if model.num_students_1min_window > 0 else 0
 
-        # arquivo ='valores.xlsx'
+            self.avg_waiting_until_tray_time_total = (model.waiting_time_until_tray_total / model.num_students_after_tray_total) if model.num_students_after_tray_total > 0 else 0
 
-        # if os.path.exists(arquivo):
-        #     wb = load_workbook(arquivo)
-        #     ws = wb.active
-        # else:
-        #     wb = Workbook()
-        #     ws = wb.active
+        arquivo ='valores.xlsx'
 
-        # ultima_linha = ws.max_row
-        # if ws.cell(row=ultima_linha, column=1).value is not None:
-        #     nova_linha = ultima_linha + 1
-        # else:
-        #     nova_linha = ultima_linha
+        if os.path.exists(arquivo):
+            wb = load_workbook(arquivo)
+            ws = wb.active
+        else:
+            wb = Workbook()
+            ws = wb.active
 
-        # ws.cell(row=nova_linha, column=1, value=avg_waiting_time_until_tray)
-        # ws.cell(row=nova_linha, column=2, value=avg_waiting_until_tray_time_total)
-        # wb.save(arquivo)
+        ultima_linha = ws.max_row
+        if ws.cell(row=ultima_linha, column=1).value is not None:
+            nova_linha = ultima_linha + 1
+        else:
+            nova_linha = ultima_linha
+
+        ws.cell(row=nova_linha, column=1, value=self.avg_waiting_time_until_tray)
+        ws.cell(row=nova_linha, column=2, value=self.avg_waiting_until_tray_time_total)
+        wb.save(arquivo)
         # Real-time charting is not natively supported in Mesa's TextElement.
         # For now, we improve the text formatting and show times in minutes, aligned to the left.
 
         return (
-            # f"<div style='text-align:left; font-family:monospace;'>"
-            # f"<b>Hora Atual:</b> {model.get_human_readable_time()}<br>"
-            # f"<b>Estudantes no RU:</b> {model.num_students}<br>"
-            # f"<b>Tempo de fila médio antes da rampa:</b> {avg_waiting_time_until_tray/60.:.2f} min<br>"
-            # f"<b>Tempo médio de espera (total):</b> {avg_waiting_until_tray_time_total/60.:.2f} min"
-            # f"</div>"
+            f"<div style='text-align:left; font-family:monospace;'>"
+            f"<b>Hora Atual:</b> {model.get_human_readable_time()}<br>"
+            f"<b>Estudantes no RU:</b> {model.num_students}<br>"
+            f"<b>Tempo de fila médio antes da rampa:</b> {self.avg_waiting_time_until_tray/60.:.2f} min<br>"
+            f"<b>Tempo médio de espera (total):</b> {self.avg_waiting_until_tray_time_total/60.:.2f} min"
+            f"</div>"
         )
 class RestaurantModel(Model):
     AGENT_TYPE_MAPPING = {

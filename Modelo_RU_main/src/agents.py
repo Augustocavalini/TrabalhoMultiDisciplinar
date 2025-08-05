@@ -15,10 +15,12 @@ CATRACA_MAPPING = {1: (18, 2), 2: (18, 4), 3: (99, 2), 4: (99, 4)}
 TRAY_TYPES = {'Rice_Tray', 'Brown_Rice_Tray', 'Beans_Tray',
               'Guarn_Tray', 'Veg_Tray', 'Meat_Tray', 'Sal_Tray', 'Talher_Tray', 'Juice', 'Dessert', 'Spices', 'Empty_Tray'}
 
-DEFAULT_TRAY_PORTIONS = 5
-DEFAULT_TRAY_PORTIONS_STD = 2
-DEFAULT_TRAY_PORTIONS_REFILL = 10
-DEFAULT_TRAY_PORTIONS_REFILL_STD = 10
+DEFAULT_TRAY_PORTIONS = 100
+DEFAULT_TRAY_PORTIONS_STD = 25
+DEFAULT_TRAY_PORTIONS_MIN = 85
+DEFAULT_TRAY_PORTIONS_REFILL = 90
+DEFAULT_TRAY_PORTIONS_REFILL_STD = 40
+DEFAULT_TRAY_PORTIONS_REFILL_MIN = 30
 
 
 
@@ -28,16 +30,16 @@ DEFAULT_TRAY_PORTIONS_REFILL_STD = 10
 # Mapear tipos de bandeja para parâmetros de distribuição (média, desvio, mínimo)
 
 TRAY_INTERACTION_PARAMS = {
-    'brown_rice': (6, 2, 4),
-    'Rice_Tray': (6, 2, 4),
-    'Beans_Tray': (6, 2, 4),
-    'Guarn_Tray': (6, 2, 4),
-    'Veg_Tray': (6, 2, 4),
-    'Meat_Tray': (6, 2, 4),
-    'Sal_Tray': (6, 2, 4),
+    'brown_rice': (12, 3, 4),
+    'Rice_Tray': (12, 3, 4),
+    'Beans_Tray': (12, 3, 4),
+    'Guarn_Tray': (12, 3, 4),
+    'Veg_Tray': (12, 3, 4),
+    'Meat_Tray': (12, 3, 4),
+    'Sal_Tray': (12, 3, 4),
     'Talher_Tray': (2, 1, 2),
     'Juice': (10, 4, 4),
-    'Spices': (4, 2, 2),
+    'Spices': (3, 2, 2),
     'Dessert': (1, 2, 1),
 }
 
@@ -70,7 +72,7 @@ class StaticAgent(Agent):
             elif  self.food_count <= 0:
                 self.is_refilling = True
                 self.food_count = 0
-                self.refill_timer = int(max(2, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
+                self.refill_timer = int(max(DEFAULT_TRAY_PORTIONS_REFILL_MIN, np.random.normal(DEFAULT_TRAY_PORTIONS_REFILL, DEFAULT_TRAY_PORTIONS_REFILL_STD)))
 
         else:
             if self.refill_timer > 0:
@@ -80,7 +82,7 @@ class StaticAgent(Agent):
 
             elif self.refill_timer == 0:
                 self.is_refilling = False
-                self.food_count = int(max(10, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD)))
+                self.food_count = int(max(DEFAULT_TRAY_PORTIONS_MIN, np.random.normal(DEFAULT_TRAY_PORTIONS, DEFAULT_TRAY_PORTIONS_STD)))
                 print(f"Refilled {self.type} at position {self.x}, {self.y}")
 
         
