@@ -57,6 +57,8 @@ class ModelText(TextElement):
             f"<b>Tempo médio de espera (total):</b> {self.avg_waiting_until_tray_time_total/60.:.2f} min"
             f"</div>"
         )
+    
+
 class RestaurantModel(Model):
     AGENT_TYPE_MAPPING = {
         CellType.TURNSTILE: 'Turnstile',
@@ -135,7 +137,41 @@ class RestaurantModel(Model):
                     agent_type = self.AGENT_TYPE_MAPPING[cell_value]
                     agent = StaticAgent((x, y), self, x, y, agent_type)
                     self.grid.place_agent(agent, (x, y))
-                    self.schedule.add(agent) 
+                    self.schedule.add(agent)
+
+        self.avg_waiting_time_until_tray = 0
+        self.avg_waiting_until_tray_time_total = 0
+        
+        self.arquivo ='valores.xlsx'
+
+        if os.path.exists(self.arquivo):
+            self.wb = load_workbook(self.arquivo)
+            self.ws = self.wb.active
+        else:
+            self.wb = Workbook()
+            self.ws = self.wb.active
+
+    def render(self):
+        # waiting_time_until_tray = sum(agent.waiting_time_until_tray for agent in student_agents if agent.flag_until_tray == True) / \
+        #     len(student_agents) if student_agents else 0
+
+        if (self._steps % 30) == 0: 
+            self.avg_waiting_time_until_tray = (self.waiting_time_until_tray / self.num_students_1min_window) if self.num_students_1min_window > 0 else 0
+
+            self.avg_waiting_until_tray_time_total = (self.waiting_time_until_tray_total / self.num_students_after_tray_total) if self.num_students_after_tray_total > 0 else 0
+
+        ultima_linha = self.ws.max_row
+        if self.ws.cell(row=ultima_linha, column=1).value is not None:
+            nova_linha = ultima_linha + 1
+        else:
+            nova_linha = ultima_linha
+
+        self.ws.cell(row=nova_linha, column=1, value=self.avg_waiting_time_until_tray)
+        self.ws.cell(row=nova_linha, column=2, value=self.avg_waiting_until_tray_time_total)
+        self.wb.save(self.arquivo)
+        # Real-time charting is not natively supported in Mesa's TextElement.
+        # For now, we improve the text formatting and show times in minutes, aligned to the left.
+    
     def step(self):
         """Defines the action taken in each time step of the simulation."""
         current_time = self.get_human_readable_time()
@@ -157,6 +193,8 @@ class RestaurantModel(Model):
         self.put_students_in_line() # colocar um estudante depois da catraca, se houver um na fila
 
         self.datacollector.collect(self)
+
+        self.render()
 
     def get_next_id(self):
         self.next_id += 1
