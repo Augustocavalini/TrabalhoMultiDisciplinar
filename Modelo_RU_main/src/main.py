@@ -46,5 +46,5 @@ if __name__ == "__main__":
     modelo = RestaurantModel(external_grid=external_grid, day=desired_day, meal=desired_meal, hour=desired_hour, filtered_df=filtered_df)
 
     # Executa 100 passos da simulação
-    for i in range(60*60):
+    for i in range(60 * 60 * 3):
         modelo.step()

@@ -30,13 +30,13 @@ DEFAULT_TRAY_PORTIONS_REFILL_MIN = 30
 # Mapear tipos de bandeja para parâmetros de distribuição (média, desvio, mínimo)
 
 TRAY_INTERACTION_PARAMS = {
-    'brown_rice': (12, 3, 4),
-    'Rice_Tray': (12, 3, 4),
-    'Beans_Tray': (12, 3, 4),
-    'Guarn_Tray': (12, 3, 4),
-    'Veg_Tray': (12, 3, 4),
-    'Meat_Tray': (12, 3, 4),
-    'Sal_Tray': (12, 3, 4),
+    'brown_rice': (25, 3, 4),
+    'Rice_Tray': (25, 3, 4),
+    'Beans_Tray': (25, 3, 4),
+    'Guarn_Tray': (25, 3, 4),
+    'Veg_Tray': (25, 3, 4),
+    'Meat_Tray': (25, 3, 4),
+    'Sal_Tray': (25, 3, 4),
     'Talher_Tray': (2, 1, 2),
     'Juice': (10, 4, 4),
     'Spices': (3, 2, 2),
@@ -788,7 +788,7 @@ class StudentAgent(Agent):
 
     def set_table_interaction_target(self, table):
         time_table_delays = [60*10, 60*12, 60*15, 60*17, 60*18, 60*20, 60*23, 60*25, 60*30, 60*35, 60*37, 60*40, 60*40.5, 60*45, 60*50, 60*55, 60*60, 60*70]
-        frequencies_table = [15, 1, 26, 1, 2, 100, 1, 26, 133, 7, 1, 58, 1, 5, 13, 1, 6, 2]
+        frequencies_table = [15   , 1    , 26   , 1    , 2    , 100  , 1    , 26   , 133  , 7    , 1    , 58   , 1      , 5    , 13   , 1    , 6    , 2    ]
         x = np.random.choice(time_table_delays, p=np.array(frequencies_table)/sum(frequencies_table))
         self.table_interaction_target = table
         self.interaction_table_timer = x
